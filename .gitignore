@@ -1,4 +1,72 @@
-# Logs
+# ==============================================================================
+# Modern Enigma 96 Cryptographic System - Monorepo .gitignore
+# Platform Coverage: Web (React/Vite), Android (Kotlin/Compose), Windows (.NET 8)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Operating System & Local Environment
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# ------------------------------------------------------------------------------
+# 2. IDEs & Editors
+# ------------------------------------------------------------------------------
+# JetBrains / Android Studio
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+
+# Visual Studio / Windows
+.vs/
+windows/.vs/
+**/.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.ntvs*
+*.njsproj
+
+# Vim / Emacs / Generic swap files
+*.sw?
+*~
+*.bak
+
+# ------------------------------------------------------------------------------
+# 3. Environment Variables & Sensitive Credentials
+# ------------------------------------------------------------------------------
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+*.env.*.local
+!.env.example
+
+# Cryptographic Keys & Android Keystores
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+google-services.json
+GoogleService-Info.plist
+
+# ------------------------------------------------------------------------------
+# 4. Logs, Diagnostic & Scratch Directories
+# ------------------------------------------------------------------------------
 logs
 *.log
 npm-debug.log*
@@ -6,29 +74,62 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-# Diagnostic & Scratch
 .scratch/
 .system_generated/
-*.tsbuildinfo
 
-# Dependencies
-node_modules
-dist
-dist-ssr
+# ------------------------------------------------------------------------------
+# 5. Web Platform (/web - React, TypeScript, Vite, Node)
+# ------------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+.vite/
+**/.vite/
+*.tsbuildinfo
+.eslintcache
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-Thumbs.db
+# ------------------------------------------------------------------------------
+# 6. Android Platform (/android - Kotlin, Jetpack Compose, Gradle)
+# ------------------------------------------------------------------------------
+.gradle/
+**/android/.gradle/
+**/android/.kotlin/
+build/
+**/android/**/build/
+**/build/
+local.properties
+**/android/local.properties
+.cxx/
+**/android/**/.cxx/
+captures/
+.externalNativeBuild/
 
-# Generated PDFs / Downloaded exports
+# Binaries, packages & bundles
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+apk/
+
+# ------------------------------------------------------------------------------
+# 7. Windows Desktop Platform (/windows - C#, .NET 8, WPF)
+# ------------------------------------------------------------------------------
+**/bin/
+**/obj/
+windows/**/bin/
+windows/**/obj/
+windows/artifacts/
+windows/publish/
+dist-windows/
+[Tt]est[Rr]esults/
+*.pdb
+
+# ------------------------------------------------------------------------------
+# 8. User-Generated / Exported Reports
+# ------------------------------------------------------------------------------
 *.pdf

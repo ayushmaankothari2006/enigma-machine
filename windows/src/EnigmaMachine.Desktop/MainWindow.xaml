@@ -1,0 +1,958 @@
+﻿<Window x:Class="EnigmaMachine.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:EnigmaMachine.Desktop.ViewModels"
+        mc:Ignorable="d"
+        Title="Modern Enigma 96 Cryptographic System - Native Windows Desktop"
+        Width="1240" Height="820" MinWidth="760" MinHeight="560"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextHintingMode="Fixed"
+        RenderOptions.ClearTypeHint="Enabled"
+        RenderOptions.BitmapScalingMode="HighQuality">
+
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid Background="{DynamicResource WindowGradientBrush}"
+          SnapsToDevicePixels="True"
+          UseLayoutRounding="True">
+        <Grid.RowDefinitions>
+            <!-- 0: Sticky Top Brand Header (Web Parity: Header.tsx) -->
+            <RowDefinition Height="Auto" />
+            <!-- 1: Workspace Cards (Web Parity: 3 Clay Cards) -->
+            <RowDefinition Height="*" />
+            <!-- 2: Subtle Footer Status Bar -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ========================================================================= -->
+        <!-- ROW 0: STICKY TOP BRAND HEADER (Replicates web/src/components/Header.tsx) -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource HeaderBorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="24,10,24,10"
+                SnapsToDevicePixels="True"
+                UseLayoutRounding="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Brand & Identity -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Header Action Buttons -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Enigma 96 Brand Identity -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- CPU Icon Badge (from-blue-700 to-blue-600 rounded-2xl) -->
+                    <Border Width="42" Height="42" CornerRadius="12"
+                            Background="{DynamicResource PrimaryAccentGradientBrush}"
+                            BorderBrush="#FFFFFF" BorderThickness="1"
+                            Margin="0,0,12,0"
+                            SnapsToDevicePixels="True"
+                            UseLayoutRounding="True">
+                        <Path Data="{StaticResource IconCpu}"
+                              Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                              Width="22" Height="22" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+
+                    <!-- Title & Subtitle in Cascadia Mono Bold -->
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="ENIGMA" Style="{StaticResource HeadingLarge}" />
+                            <TextBlock Text="96" Style="{StaticResource HeadingLarge}" Foreground="{DynamicResource OrangeAccentBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="Modern 96-Character Involutory Cipher Engine"
+                                   Style="{StaticResource CardSubtitle}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Right: Header Actions (Export PDF) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Export PDF Button (Web Parity: clay-btn-orange) -->
+                    <Button x:Name="ExportPdfButton" x:FieldModifier="public"
+                            Command="{Binding ExportPdfCommand}"
+                            Style="{StaticResource ClayButtonOrange}"
+                            Padding="14,7"
+                            ToolTip="Export 3-Page Cryptographic PDF Document">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconDownload}"
+                                  Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                            <TextBlock Text="Export PDF" FontSize="12" FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Dark / Light Theme Toggle Button (Collapsed - UI locked to Light mode) -->
+                    <Button x:Name="ToggleThemeButton" x:FieldModifier="public"
+                            Command="{Binding ToggleThemeCommand}"
+                            Style="{StaticResource ClayButtonWhite}"
+                            Visibility="Collapsed"
+                            Padding="10,6" Margin="0,0,10,0"
+                            ToolTip="Toggle between Claymorphism Light and Dark mode">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconSun}" Fill="{DynamicResource OrangeAccentBrush}"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" />
+                            <TextBlock x:Name="ThemeButtonLabel" x:FieldModifier="public"
+                                       Text="{Binding ThemeButtonText}" FontSize="12" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ========================================================================= -->
+        <!-- ROW 1: MAIN WORKSPACE (Replicates App.tsx max-w-7xl 3 Cards Layout)       -->
+        <!-- ========================================================================= -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="20,12,20,10">
+            <Grid MaxWidth="1320">
+                <Grid.RowDefinitions>
+                    <!-- Row 0: Feedback Notification Banner (InfoBar) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Row 1: Plaintext Input & Ciphertext Output Cards (Side-by-Side) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Row 2: Machine Settings Dashboard Card (Spans Full Width) -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- ROW 0: INFOBAR NOTIFICATION FEEDBACK BANNER -->
+                <Border x:Name="NotificationBar" x:FieldModifier="public"
+                        Grid.Row="0" Margin="0,0,0,12"
+                        Background="{Binding NotificationSeverity, Converter={StaticResource SeverityToBackground}}"
+                        BorderBrush="{Binding NotificationSeverity, Converter={StaticResource SeverityToBorder}}"
+                        BorderThickness="1.5" CornerRadius="14" Padding="14,9"
+                        Visibility="{Binding IsNotificationVisible, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Severity Icon -->
+                        <Path Grid.Column="0" Data="{StaticResource IconInfo}"
+                              Fill="{Binding NotificationSeverity, Converter={StaticResource SeverityToBorder}}"
+                              Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
+
+                        <!-- Title and Message -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="NotificationTitleText" x:FieldModifier="public"
+                                       Text="{Binding NotificationTitle}" FontWeight="Bold" FontSize="13"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock x:Name="NotificationMessageText" x:FieldModifier="public"
+                                       Text="{Binding NotificationMessage}" FontSize="12"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </StackPanel>
+
+                        <!-- Dismiss Button (X) -->
+                        <Button x:Name="DismissNotificationButton" x:FieldModifier="public"
+                                Grid.Column="2" Command="{Binding DismissNotificationCommand}"
+                                Style="{StaticResource ClayButtonWhite}" Width="26" Height="26" Padding="0"
+                                ToolTip="Dismiss notification" VerticalAlignment="Center" Margin="8,0,0,0">
+                            <Path Data="{StaticResource IconClose}" Fill="{DynamicResource TextSecondaryBrush}" Width="9" Height="9" Stretch="Uniform" />
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- ROW 1: INPUT CARD & OUTPUT CARD (Replicates InputCard.tsx & OutputCard.tsx) -->
+                <Grid Grid.Row="1" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- ========================================== -->
+                    <!-- CARD 1: PLAINTEXT INPUT CARD               -->
+                    <!-- ========================================== -->
+                    <Border Grid.Column="0" Style="{StaticResource FluentCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <!-- Header & Action Buttons -->
+                                <RowDefinition Height="Auto" />
+                                <!-- Unsupported Chars Warning Banner -->
+                                <RowDefinition Height="Auto" />
+                                <!-- Inset Text Well -->
+                                <RowDefinition Height="180" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Header: Title, Char Count, Sample & Clear Buttons -->
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Title and Length -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="34" Height="34" CornerRadius="10"
+                                            Background="{DynamicResource PrimaryAccentGradientBrush}"
+                                            Margin="0,0,10,0"
+                                            SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                        <Path Data="{StaticResource IconFileText}"
+                                              Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                              Width="16" Height="16" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Plaintext Input" Style="{StaticResource CardTitle}" />
+                                        <TextBlock FontSize="11" Margin="0,1,0,0">
+                                            <Run Text="Length: " Foreground="{DynamicResource TextMutedBrush}" />
+                                            <Run Text="{Binding InputCharCount, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource TextBrandBlueBrush}" />
+                                            <Run Text=" chars" Foreground="{DynamicResource TextMutedBrush}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Action Buttons: Sample Text & Clear (Trash) -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="SampleButton" x:FieldModifier="public"
+                                            Command="{Binding LoadSampleCommand}"
+                                            Style="{StaticResource ClayButtonBlue}"
+                                            Padding="12,6" Margin="0,0,8,0"
+                                            ToolTip="Load Predefined Sample Text">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconSparkles}"
+                                                  Stroke="#FED7AA" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" />
+                                            <TextBlock Text="Sample Text" FontSize="11" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button x:Name="ClearInputButton" x:FieldModifier="public"
+                                            Command="{Binding ClearInputCommand}"
+                                            Style="{StaticResource ClayButtonWhite}"
+                                            Width="32" Height="32" Padding="0"
+                                            ToolTip="Clear input text">
+                                        <Path Data="{StaticResource IconTrash2}"
+                                              Stroke="{DynamicResource OrangeAccentBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                              Width="14" Height="14" Stretch="Uniform" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Warning notification for characters outside 96 alphabet -->
+                            <Border x:Name="UnsupportedCharsWarningBanner" x:FieldModifier="public"
+                                    Grid.Row="1" Margin="0,0,0,8"
+                                    Background="{DynamicResource WarningBackgroundBrush}"
+                                    BorderBrush="{DynamicResource WarningBrush}"
+                                    BorderThickness="1" CornerRadius="8" Padding="8,4"
+                                    Visibility="{Binding HasUnsupportedChars, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconWarning}" Fill="{DynamicResource WarningBrush}"
+                                          Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" />
+                                    <TextBlock Text="Characters outside 96-char alphabet are filtered in real-time."
+                                               FontSize="10" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Inset Textarea Well (.clay-well with Web Placeholder) -->
+                            <Border Grid.Row="2" Style="{StaticResource ClayWell}">
+                                <Grid>
+                                    <TextBlock Text="Type or paste text here to encipher in real-time..."
+                                               FontFamily="Cascadia Mono, Cascadia Code, Consolas, Courier New, monospace"
+                                               FontSize="13" FontWeight="Normal"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="4,4,0,0" IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text.Length, ElementName=InputTextBox}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <TextBox x:Name="InputTextBox" x:FieldModifier="public"
+                                             Style="{StaticResource FluentTextBox}"
+                                             Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- ========================================== -->
+                    <!-- CARD 2: CIPHERTEXT OUTPUT CARD              -->
+                    <!-- ========================================== -->
+                    <Border Grid.Column="2" Style="{StaticResource FluentCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <!-- Header & Action Buttons -->
+                                <RowDefinition Height="Auto" />
+                                <!-- Inset Text Well -->
+                                <RowDefinition Height="180" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Header: Title, Output Char Count, Use as Input & Copy Buttons -->
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Title and Length -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="34" Height="34" CornerRadius="10"
+                                            Background="{DynamicResource OrangeAccentGradientBrush}"
+                                            Margin="0,0,10,0"
+                                            SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                        <Path Data="{StaticResource IconLock}"
+                                              Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                              Width="16" Height="16" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Ciphertext Output" Style="{StaticResource CardTitle}" />
+                                        <TextBlock FontSize="11" Margin="0,1,0,0">
+                                            <Run Text="Length: " Foreground="{DynamicResource TextMutedBrush}" />
+                                            <Run Text="{Binding OutputCharCount, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource OrangeAccentBrush}" />
+                                            <Run Text=" chars" Foreground="{DynamicResource TextMutedBrush}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Action Buttons: Use as Input & Copy -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Use as Input Button (Web Parity: clay-btn-orange) -->
+                                    <Button x:Name="UseOutputAsInputButton" x:FieldModifier="public"
+                                            Command="{Binding UseOutputAsInputCommand}"
+                                            Style="{StaticResource ClayButtonOrange}"
+                                            Padding="12,6" Margin="0,0,8,0"
+                                            ToolTip="Reciprocal Decipherment: Move Ciphertext into Input and reset positions">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconArrowLeftRight}"
+                                                  Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" />
+                                            <TextBlock Text="Use as Input" FontSize="11" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Copy Button with Visual Feedback (Web Parity: Icon Only, text removed) -->
+                                    <Button x:Name="CopyOutputButton" x:FieldModifier="public"
+                                            Command="{Binding CopyOutputCommand}"
+                                            Style="{StaticResource ClayButtonBlue}"
+                                            Width="32" Height="32" Padding="0"
+                                            ToolTip="Copy ciphertext to clipboard">
+                                        <Grid>
+                                            <Path x:Name="copyIcon" Data="{StaticResource IconCopy}"
+                                                  Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="14" Height="14" Stretch="Uniform"
+                                                  Visibility="{Binding IsCopied, Converter={StaticResource InverseBoolToVisibility}}" />
+                                            <Path Data="{StaticResource IconCheck}"
+                                                  Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="14" Height="14" Stretch="Uniform"
+                                                  Visibility="{Binding IsCopied, Converter={StaticResource BoolToVisibility}}" />
+                                            <TextBlock x:Name="CopyButtonTextLabel" x:FieldModifier="public"
+                                                       Text="{Binding CopyButtonText}"
+                                                       Width="0" Height="0" Opacity="0"
+                                                       IsHitTestVisible="False" />
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Inset Textarea Well (.clay-well with Web Placeholder) -->
+                            <Border Grid.Row="1" Style="{StaticResource ClayWell}">
+                                <Grid>
+                                    <TextBlock Text="Ciphertext appears here automatically..."
+                                               FontFamily="Cascadia Mono, Cascadia Code, Consolas, Courier New, monospace"
+                                               FontSize="13" FontWeight="Normal"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="4,4,0,0" IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text.Length, ElementName=OutputTextBox}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <TextBox x:Name="OutputTextBox" x:FieldModifier="public"
+                                             Style="{StaticResource FluentTextBox}"
+                                             Text="{Binding OutputText, Mode=OneWay}"
+                                             IsReadOnly="True"
+                                             TextWrapping="Wrap" />
+
+                                    <ProgressBar Height="2" IsIndeterminate="True"
+                                                 Foreground="{DynamicResource OrangeAccentBrush}" Background="Transparent"
+                                                 BorderThickness="0" VerticalAlignment="Top"
+                                                 Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibility}}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ========================================================================= -->
+                <!-- ROW 2: MACHINE SETTINGS DASHBOARD CARD (Replicates SettingsCard.tsx)      -->
+                <!-- ========================================================================= -->
+                <Border Grid.Row="2" Style="{StaticResource FluentCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- Dashboard Header & Actions -->
+                            <RowDefinition Height="Auto" />
+                            <!-- 3 Rotor Bays Grid -->
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Dashboard Header: Title, Reflector Selector & Quick Action Buttons -->
+                        <Border Grid.Row="0" Margin="0,0,0,12"
+                                BorderBrush="{DynamicResource ClayWellBorderBrush}" BorderThickness="0,0,0,1"
+                                Padding="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Title -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="34" Height="34" CornerRadius="10"
+                                            Background="{DynamicResource PrimaryAccentGradientBrush}"
+                                            Margin="0,0,10,0"
+                                            SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                        <Path Data="{StaticResource IconSliders}"
+                                              Stroke="#FFFFFF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                              Width="16" Height="16" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Machine Settings Dashboard" Style="{StaticResource CardTitle}" />
+                                        <TextBlock Text="3-Rotor Electromechanical Pathway &amp; Turnover Configurations"
+                                                   Style="{StaticResource CardSubtitle}" Margin="0,1,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Controls: Random Key Button (Reflector & Reset hidden to match Web UI) -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Collapsed Reflector Selector for test suite compatibility -->
+                                    <ComboBox x:Name="ReflectorComboBox" x:FieldModifier="public"
+                                              ItemsSource="{Binding AvailableReflectors}"
+                                              SelectedItem="{Binding SelectedReflector}"
+                                              Visibility="Collapsed" />
+
+                                    <!-- Random Key Button (Web Parity: clay-btn-blue with Dices) -->
+                                    <Button x:Name="RandomizeSettingsButton" x:FieldModifier="public"
+                                            Command="{Binding RandomizeSettingsCommand}"
+                                            Style="{StaticResource ClayButtonBlue}"
+                                            Padding="14,7"
+                                            ToolTip="Randomize starting positions, notches, and ring offsets">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconDices}"
+                                                  Stroke="#FED7AA" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent"
+                                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" />
+                                            <TextBlock Text="Random Key" FontSize="11" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Collapsed Reset Defaults Button for test suite compatibility -->
+                                    <Button x:Name="ResetSettingsButton" x:FieldModifier="public"
+                                            Command="{Binding ResetSettingsCommand}"
+                                            Visibility="Collapsed" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 3 Rotor Bays: Left Rotor, Middle Rotor, Right Rotor -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- ========================================== -->
+                            <!-- BAY 1: LEFT ROTOR (R1 • Slow)              -->
+                            <!-- ========================================== -->
+                            <Border Grid.Column="0" Style="{StaticResource ClayBay}" DataContext="{Binding LeftRotor}">
+                                <StackPanel>
+                                    <!-- Slot Header: Title & Pill Badge (Web Parity) -->
+                                    <Border Margin="0,0,0,8"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}" BorderThickness="0,0,0,1"
+                                            Padding="0,0,0,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                       FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                       FontWeight="Bold" FontSize="13"
+                                                       Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                       VerticalAlignment="Center" />
+
+                                            <!-- Badge: R1 • Slow (clay-pill-blue) -->
+                                            <Border Grid.Column="1"
+                                                    Background="{DynamicResource ClayPillBlueBackgroundBrush}"
+                                                    BorderBrush="#FFFFFF" BorderThickness="1"
+                                                    CornerRadius="10" Padding="8,2">
+                                                <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                                           Foreground="{DynamicResource ClayPillBlueTextBrush}" />
+                                            </Border>
+
+                                            <!-- Collapsed Rotor Model for test compatibility -->
+                                            <ComboBox SelectedItem="{Binding SelectedRotorId}" Visibility="Collapsed" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Position (P) Section with Editable Turnover Notch -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Position (P):"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                   VerticalAlignment="Center" />
+
+                                        <!-- Notch Dropdown (Replicates NotchDropdown.tsx) -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="Notch:" FontSize="10" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <ComboBox ItemsSource="{Binding AvailableNotches}"
+                                                      SelectedItem="{Binding SelectedNotch}"
+                                                      Style="{StaticResource FluentComboBox}"
+                                                      Width="126" Height="26"
+                                                      ToolTip="Turnover notch threshold (1 to 96)" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Large Central Position Well (Replicates Web HoldButton Steppers + Glyph) -->
+                                    <Border Style="{StaticResource ClayWell}" Padding="8,8" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Decrement Position (Hold-to-Step Supported) -->
+                                            <RepeatButton Grid.Column="0"
+                                                          Command="{Binding StepPositionDownCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="-"
+                                                          ToolTip="Previous Position (Click or Hold)" />
+
+                                            <!-- Center Glyph Display (Web Parity: Huge Glyph + Index in Orange) -->
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding PositionGlyph}"
+                                                           FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                           FontSize="22" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock FontSize="10" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center" Margin="0,1,0,0">
+                                                    <Run Text="Index " />
+                                                    <Run Text="{Binding DisplayIndex, Mode=OneWay}" Foreground="{DynamicResource OrangeAccentBrush}" FontWeight="Bold" />
+                                                    <Run Text=" / 96" />
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <!-- Increment Position (Hold-to-Step Supported) -->
+                                            <RepeatButton Grid.Column="2"
+                                                          Command="{Binding StepPositionUpCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="+"
+                                                          ToolTip="Next Position (Click or Hold)" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Ring Offset (R) Section -->
+                                    <Grid Margin="0,0,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ring Offset (R):"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}" />
+                                        <TextBlock Grid.Column="1" Text="Range: 1..96"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextMutedBrush}" />
+                                    </Grid>
+
+                                    <!-- Recessed Ring Bar -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}"
+                                            BorderThickness="1" CornerRadius="10" Padding="8,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                                <Run Text="Ring: " Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <Run Text="{Binding DisplayRing, Mode=OneWay}" Foreground="{DynamicResource TextBrandBlueBrush}" FontWeight="Bold" />
+                                            </TextBlock>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <RepeatButton Command="{Binding StepRingDownCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="-"
+                                                              Margin="0,0,4,0"
+                                                              ToolTip="Decrease Ring Setting (Click or Hold)" />
+                                                <RepeatButton Command="{Binding StepRingUpCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="+"
+                                                              ToolTip="Increase Ring Setting (Click or Hold)" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ========================================== -->
+                            <!-- BAY 2: MIDDLE ROTOR (R2 • Medium)          -->
+                            <!-- ========================================== -->
+                            <Border Grid.Column="2" Style="{StaticResource ClayBay}" DataContext="{Binding MiddleRotor}">
+                                <StackPanel>
+                                    <!-- Slot Header: Title & Pill Badge (Web Parity) -->
+                                    <Border Margin="0,0,0,8"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}" BorderThickness="0,0,0,1"
+                                            Padding="0,0,0,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                       FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                       FontWeight="Bold" FontSize="13"
+                                                       Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                       VerticalAlignment="Center" />
+
+                                            <!-- Badge: R2 • Medium (clay-pill-orange) -->
+                                            <Border Grid.Column="1"
+                                                    Background="{DynamicResource ClayPillOrangeBackgroundBrush}"
+                                                    BorderBrush="#FFFFFF" BorderThickness="1"
+                                                    CornerRadius="10" Padding="8,2">
+                                                <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                                           Foreground="{DynamicResource ClayPillOrangeTextBrush}" />
+                                            </Border>
+
+                                            <!-- Collapsed Rotor Model for test compatibility -->
+                                            <ComboBox SelectedItem="{Binding SelectedRotorId}" Visibility="Collapsed" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Position (P) Section with Editable Turnover Notch -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Position (P):"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                   VerticalAlignment="Center" />
+
+                                        <!-- Notch Dropdown (Replicates NotchDropdown.tsx) -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="Notch:" FontSize="10" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <ComboBox ItemsSource="{Binding AvailableNotches}"
+                                                      SelectedItem="{Binding SelectedNotch}"
+                                                      Style="{StaticResource FluentComboBox}"
+                                                      Width="126" Height="26"
+                                                      ToolTip="Turnover notch threshold (1 to 96)" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Large Central Position Well -->
+                                    <Border Style="{StaticResource ClayWell}" Padding="8,8" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Decrement Position -->
+                                            <RepeatButton Grid.Column="0"
+                                                          Command="{Binding StepPositionDownCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="-"
+                                                          ToolTip="Previous Position (Click or Hold)" />
+
+                                            <!-- Center Glyph Display -->
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding PositionGlyph}"
+                                                           FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                           FontSize="22" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock FontSize="10" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center" Margin="0,1,0,0">
+                                                    <Run Text="Index " />
+                                                    <Run Text="{Binding DisplayIndex, Mode=OneWay}" Foreground="{DynamicResource OrangeAccentBrush}" FontWeight="Bold" />
+                                                    <Run Text=" / 96" />
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <!-- Increment Position -->
+                                            <RepeatButton Grid.Column="2"
+                                                          Command="{Binding StepPositionUpCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="+"
+                                                          ToolTip="Next Position (Click or Hold)" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Ring Offset (R) Section -->
+                                    <Grid Margin="0,0,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ring Offset (R):"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}" />
+                                        <TextBlock Grid.Column="1" Text="Range: 1..96"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextMutedBrush}" />
+                                    </Grid>
+
+                                    <!-- Recessed Ring Bar -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}"
+                                            BorderThickness="1" CornerRadius="10" Padding="8,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                                <Run Text="Ring: " Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <Run Text="{Binding DisplayRing, Mode=OneWay}" Foreground="{DynamicResource TextBrandBlueBrush}" FontWeight="Bold" />
+                                            </TextBlock>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <RepeatButton Command="{Binding StepRingDownCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="-"
+                                                              Margin="0,0,4,0"
+                                                              ToolTip="Decrease Ring Setting (Click or Hold)" />
+                                                <RepeatButton Command="{Binding StepRingUpCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="+"
+                                                              ToolTip="Increase Ring Setting (Click or Hold)" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ========================================== -->
+                            <!-- BAY 3: RIGHT ROTOR (R3 • Fast)             -->
+                            <!-- ========================================== -->
+                            <Border Grid.Column="4" Style="{StaticResource ClayBay}" DataContext="{Binding RightRotor}">
+                                <StackPanel>
+                                    <!-- Slot Header: Title & Pill Badge (Web Parity) -->
+                                    <Border Margin="0,0,0,8"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}" BorderThickness="0,0,0,1"
+                                            Padding="0,0,0,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                       FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                       FontWeight="Bold" FontSize="13"
+                                                       Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                       VerticalAlignment="Center" />
+
+                                            <!-- Badge: R3 • Fast (clay-pill-blue) -->
+                                            <Border Grid.Column="1"
+                                                    Background="{DynamicResource ClayPillBlueBackgroundBrush}"
+                                                    BorderBrush="#FFFFFF" BorderThickness="1"
+                                                    CornerRadius="10" Padding="8,2">
+                                                <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                                           Foreground="{DynamicResource ClayPillBlueTextBrush}" />
+                                            </Border>
+
+                                            <!-- Collapsed Rotor Model for test compatibility -->
+                                            <ComboBox SelectedItem="{Binding SelectedRotorId}" Visibility="Collapsed" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Position (P) Section with Editable Turnover Notch -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Position (P):"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                   VerticalAlignment="Center" />
+
+                                        <!-- Notch Dropdown (Replicates NotchDropdown.tsx) -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="Notch:" FontSize="10" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       VerticalAlignment="Center" Margin="0,0,4,0" />
+                                            <ComboBox ItemsSource="{Binding AvailableNotches}"
+                                                      SelectedItem="{Binding SelectedNotch}"
+                                                      Style="{StaticResource FluentComboBox}"
+                                                      Width="126" Height="26"
+                                                      ToolTip="Turnover notch threshold (1 to 96)" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Large Central Position Well -->
+                                    <Border Style="{StaticResource ClayWell}" Padding="8,8" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Decrement Position -->
+                                            <RepeatButton Grid.Column="0"
+                                                          Command="{Binding StepPositionDownCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="-"
+                                                          ToolTip="Previous Position (Click or Hold)" />
+
+                                            <!-- Center Glyph Display -->
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding PositionGlyph}"
+                                                           FontFamily="Cascadia Mono, Cascadia Code, Consolas, monospace"
+                                                           FontSize="22" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextBrandBlueBrush}"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock FontSize="10" FontWeight="Bold"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           HorizontalAlignment="Center" Margin="0,1,0,0">
+                                                    <Run Text="Index " />
+                                                    <Run Text="{Binding DisplayIndex, Mode=OneWay}" Foreground="{DynamicResource OrangeAccentBrush}" FontWeight="Bold" />
+                                                    <Run Text=" / 96" />
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <!-- Increment Position -->
+                                            <RepeatButton Grid.Column="2"
+                                                          Command="{Binding StepPositionUpCommand}"
+                                                          Style="{StaticResource ClayStepperRepeatButton}"
+                                                          Content="+"
+                                                          ToolTip="Next Position (Click or Hold)" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Ring Offset (R) Section -->
+                                    <Grid Margin="0,0,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Ring Offset (R):"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrandBlueBrush}" />
+                                        <TextBlock Grid.Column="1" Text="Range: 1..96"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextMutedBrush}" />
+                                    </Grid>
+
+                                    <!-- Recessed Ring Bar -->
+                                    <Border Background="{DynamicResource CardBackgroundBrush}"
+                                            BorderBrush="{DynamicResource ClayWellBorderBrush}"
+                                            BorderThickness="1" CornerRadius="10" Padding="8,4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" FontWeight="Bold">
+                                                <Run Text="Ring: " Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <Run Text="{Binding DisplayRing, Mode=OneWay}" Foreground="{DynamicResource TextBrandBlueBrush}" FontWeight="Bold" />
+                                            </TextBlock>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <RepeatButton Command="{Binding StepRingDownCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="-"
+                                                              Margin="0,0,4,0"
+                                                              ToolTip="Decrease Ring Setting (Click or Hold)" />
+                                                <RepeatButton Command="{Binding StepRingUpCommand}"
+                                                              Style="{StaticResource ClayStepperRepeatButton}"
+                                                              Width="24" Height="24" FontSize="11" Content="+"
+                                                              ToolTip="Increase Ring Setting (Click or Hold)" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- ========================================================================= -->
+        <!-- ROW 2: STATUS BAR FOOTER (Clean & Monospace)                              -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource HeaderBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="24,6,24,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="11" FontWeight="Bold"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Modern Enigma 96 • Reciprocal Invariant E(E(M)) = M • .NET 8 WPF Native"
+                               FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

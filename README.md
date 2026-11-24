@@ -1,125 +1,93 @@
-# Modern Enigma 96 Cryptographic Cipher Engine
+# Modern Enigma 96 Cryptographic System
 
-[![Tests](https://img.shields.io/badge/Tests-26%20Passed-emerald.svg)](./src/__tests__)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8.svg)](https://tailwindcss.com/)
-
-An interactive, electromechanical simulation of the **Modern Enigma 96** cryptographic cipher engine. Built with an expanded **Modulo-96** alphabet (Space, ASCII 33–126, and Newline), authentic historical 3-rotor double-stepping anomaly mechanics, strictly involutory zero-self-encipherment reflection, and real-time reciprocal decipherment ($E(E(M)) = M$).
+An organized, multi-platform cryptographic suite implementing the **Modern Enigma 96 Cryptographic System** across web, native mobile (Android), and native desktop (Windows) platforms.
 
 ---
 
-## Key Features
+## Repository Architecture
 
-- **96-Character Involutory Cipher**: Full support for printable ASCII characters (`!` to `~`), Space (index `0`), and Enter/Newline (index `95`).
-- **Reciprocal Encipherment ($E(E(M)) = M$)**: Enciphering any ciphertext under the exact same starting machine key recovers the original plaintext identically without switching modes.
-- **Strictly Involutory Reflector**: Reflector A pairings guarantee zero self-encipherment ($\text{Ref}(x) \neq x$).
-- **Authentic Double-Stepping Pawl Mechanics**: Classical mechanical double-stepping anomaly faithfully reproduced across Slow ($R_1$), Medium ($R_2$), and Fast ($R_3$) rotor bays.
-- **Customizable Rotor Bays**: Interactive position stepping, ring offsets, and customizable turnover notches with smooth 5-item popover selection.
-- **Claymorphism Design System**: Tactile 3D aesthetic featuring a Royal Blue (`#1D4ED8`), Vibrant Orange (`#F97316`), and Crisp White (`#FFFFFF`) palette, complete with bold Cascadia Mono typography.
-- **Instant 3-Page PDF Specification Export**: Dynamically generates and downloads a structured 3-page PDF:
-  - **Page 1**: Machine Specifications & Rotor Key Configuration
-  - **Page 2**: Plaintext Input Buffer & Metrics
-  - **Page 3**: Ciphertext Output Buffer & Scrambled Payload
-- **Optimized & Fault-Tolerant**: $O(1)$ constant-time character indexing, dynamic code-splitting (lazy-loaded PDF engine reducing entry bundle to ~27 kB), and global React Error Boundary protection.
+This repository is structured into dedicated, decoupled platform applications sharing an identical 96-character cryptographic specification:
 
----
-
-## Project Structure
-
-```text
+```
 enigma-machine/
-├── src/
-│   ├── __tests__/          # Automated Vitest test suite (26 tests)
-│   │   ├── edgeCases.test.ts
-│   │   ├── enigma.test.ts
-│   │   ├── exportPdf.test.ts
-│   │   └── useEnigma.test.ts
-│   ├── components/         # Modular React UI components
-│   │   ├── ErrorBoundary.tsx   # Global crash recovery boundary
-│   │   ├── Header.tsx          # Top navigation & PDF export action
-│   │   ├── HoldButton.tsx      # Repeat stepper with press-and-hold
-│   │   ├── InputCard.tsx       # Plaintext buffer card
-│   │   ├── NotchDropdown.tsx   # 5-item rounded turnover notch selector
-│   │   ├── OutputCard.tsx      # Ciphertext buffer & decipher action
-│   │   ├── SettingsCard.tsx    # 3-rotor electromechanical dashboard
-│   │   └── index.ts            # Clean barrel export
-│   ├── engine/             # Core cryptographic engine
-│   │   ├── alphabet.ts         # Modulo-96 definitions & O(1) math
-│   │   ├── enigma.ts           # EnigmaMachine orchestrator & stepping
-│   │   ├── presets.ts          # Rotor wirings & reflector configurations
-│   │   ├── reflector.ts        # Involutory reflection logic
-│   │   ├── rotor.ts            # Bidirectional rotor transformation
-│   │   ├── types.ts            # Engine type definitions
-│   │   └── index.ts            # Clean barrel export
-│   ├── hooks/              # Custom React application hooks
-│   │   ├── useEnigma.ts        # Machine state & synchronous re-encryption
-│   │   └── index.ts            # Clean barrel export
-│   ├── utils/              # Utility services
-│   │   ├── exportPdf.ts        # 3-Page jsPDF export generator
-│   │   └── index.ts            # Clean barrel export
-│   ├── App.tsx             # Root workspace layout
-│   ├── index.css           # Claymorphism shadows, pills & styles
-│   └── main.tsx            # Application entry point
-├── .gitignore              # Ignored build outputs and dependencies
-├── index.html              # SEO-optimized HTML5 entry with Schema.org JSON-LD
-├── package.json            # Scripts & project dependencies
-├── postcss.config.js       # PostCSS plugins
-├── tailwind.config.js      # Tailwind CSS theme configuration
-├── tsconfig.json           # TypeScript configuration
-└── vite.config.ts          # Vite build pipeline & chunk splitting
+├── web/        # Standalone Web Application (React, TypeScript, Vite, Tailwind CSS)
+├── android/    # Standalone Native Android Application (Kotlin, Jetpack Compose, Material 3)
+├── windows/    # Standalone Native Windows Desktop Application (.NET 8, WPF, Fluent Design)
+└── README.md   # Multi-platform architecture overview
 ```
 
 ---
 
-## Getting Started
+## Platform Projects
 
-### Prerequisites
-- Node.js (v18.0.0 or higher recommended)
-- npm (v9.0.0 or higher)
+### 1. Web Application (`/web`)
+- **Technology**: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons.
+- **Features**: Real-time bidirectional encipherment/decipherment, interactive rotor dashboards, step-by-step cryptographic signal tracing, and audit PDF report export.
+- **Quick Start**:
+  ```bash
+  cd web
+  npm install
+  npm run dev      # Launch local development server
+  npm run build    # Build production bundle
+  npm test         # Run Vitest cryptographic test suite (26 passing tests)
+  ```
+- Detailed documentation: [web/README.md](file:///web/README.md)
 
-### Installation
-```bash
-npm install
-```
+### 2. Native Android Application (`/android`)
+- **Technology**: 100% Native Kotlin, Jetpack Compose, Material Design 3, MVVM Architecture.
+- **Features**: Completely offline and privacy-focused (zero internet permissions declared), modern three-card Material Design layout (Plaintext Input, Ciphertext Output with one-tap copy, and Machine Settings Dashboard), real-time rotor stepping, and reciprocal decipherment.
+- **Google Play Store Ready**: Min SDK 26, Target SDK 34, adaptive vector launcher icons, ProGuard/R8 optimization rules, ready to build release APKs and Android App Bundles (AAB).
+- **Quick Start**:
+  ```bash
+  cd android
+  ./gradlew test            # Run Android unit test suite
+  ./gradlew assembleRelease # Build release APK
+  ```
+- Detailed documentation: [android/README.md](file:///android/README.md)
 
-### Development Server
-Start the local Vite development server with hot-module replacement (HMR):
-```bash
-npm run dev
-```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Run Automated Tests
-Execute the full Vitest suite (26 tests covering unit mechanics, edge cases, hooks, and PDF export):
-```bash
-npm test
-# or run in single-pass mode:
-npx vitest run
-```
-
-### Production Build
-Compile TypeScript and bundle optimized production assets:
-```bash
-npm run build
-```
-Preview the production build locally:
-```bash
-npm run preview
-```
+### 3. Native Windows Desktop Application (`/windows`)
+- **Technology**: C#, .NET 8, 100% Native WPF (Windows Presentation Foundation), Windows Fluent Design, MVVM Architecture.
+- **Features**: Real standalone native Windows app (zero web wrappers, zero Electron, zero WebViews), completely offline with CPU-based cryptographic stepping, modern three-card Fluent layout (editable input with character counter and sanitization alerts, monospace output with one-click copy visual confirmation and reciprocal transfer, and full machine settings dashboard for reflector, rotors, positions, and ring offsets).
+- **Standalone Binary**: Publishes to a standalone, single-file `.exe` (or MSIX package) ready for direct execution on Windows 10/11 x64.
+- **Quick Start**:
+  ```powershell
+  cd windows
+  .\build.ps1               # Build Visual Studio solution
+  .\test.ps1                # Run xUnit cryptographic & desktop test suite (50 passing tests)
+  .\publish.ps1 -Standalone # Build standalone single-file .exe
+  ```
+- Detailed documentation: [windows/README.md](file:///windows/README.md)
 
 ---
 
-## Cryptographic Alphabet Mapping
+## Cryptographic Specification
 
-| Index | Character / Glyph | Description |
+All three platforms implement the exact same deterministic 96-character Enigma cipher:
+
+### Alphabet Set (Size: 96)
+| Index | Character | Description |
 |---|---|---|
-| `0` | `' '` | Space |
-| `1` – `94` | `ASCII 33..126` | Printable ASCII (`!` through `~`) |
-| `95` | `'\n'` | Enter / Line Feed |
+| `0` | `' '` | Space (ASCII 32) |
+| `1..94` | `'!'` to `'~'` | Printable ASCII characters (ASCII 33 to 126) |
+| `95` | `'\n'` | Line Feed / Enter (ASCII 10) |
 
----
+Input normalization automatically converts `\r\n` (CRLF) and `\r` (CR) to `\n` (LF) and filters characters outside the 96-character set.
 
-## License
+### Rotor Catalog
+- **Rotor I**: Seed 101, Turnover Notch 33 (`'A'`)
+- **Rotor II**: Seed 202, Turnover Notch 65 (`'a'`)
+- **Rotor III**: Seed 303, Turnover Notch 16 (`'0'`)
+- **Rotor IV**: Seed 404, Turnover Notch 0 (`[Space]`)
+- **Rotor V**: Seed 505, Turnover Notch 95 (`[Enter]`)
 
-Distributed for educational and cryptographic research purposes.
+### Reflector Units
+- **Reflector A**: Seed 606 (Involution, zero fixed points)
+- **Reflector B**: Seed 707 (Involution, zero fixed points)
+
+### Authentic Double-Stepping Mechanism
+Accurately replicates the historical mechanical pawl anomaly: when the middle rotor reaches its notch, it steps both itself and the left rotor on the subsequent keystroke.
+
+### Strict Mathematical Reciprocity
+Due to the reflector involution property and reversible rotor wiring:
+$$E_k(E_k(M)) = M$$
+A ciphertext processed with identical starting rotor models, positions, ring offsets, and turnover notches produces the original plaintext.
