@@ -35,13 +35,24 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const hostnamesEnv = (Deno.env.get('TURNSTILE_HOSTNAMES') ?? 'localhost,127.0.0.1').trim();
+  const hostnamesEnv = (
+    Deno.env.get('TURNSTILE_HOSTNAMES') ??
+    'localhost,127.0.0.1,enigma-machine-one.vercel.app,enigma-machine-ayushmaankothari2006.vercel.app,enigma-machine-git-main-ayushmaankothari2006.vercel.app,enigma-machine-git-feat-enigmadrive-ayushmaankothari2006.vercel.app'
+  ).trim();
   const expectedHostnames = new Set(
     hostnamesEnv
       .split(',')
-      .map((h) => h.trim())
+      .map((h) => h.trim().toLowerCase())
       .filter(Boolean)
   );
+  const isAllowedHostname = (hostname: string | undefined): boolean => {
+    if (!hostname) return false;
+    const normalized = hostname.trim().toLowerCase();
+    return (
+      expectedHostnames.has(normalized) ||
+      /^enigma-machine-[a-z0-9-]+-ayushmaankothari2006\.vercel\.app$/.test(normalized)
+    );
+  };
 
   try {
     const payload = (await req.json()) as { token?: unknown; action?: unknown };
@@ -91,8 +102,7 @@ Deno.serve(async (req: Request) => {
     if (
       !result.success ||
       result.action !== requestedAction ||
-      !result.hostname ||
-      !expectedHostnames.has(result.hostname)
+      !isAllowedHostname(result.hostname)
     ) {
       return jsonResponse(
         { error: 'Cloudflare security verification failed. Please retry the challenge.' },
