@@ -23,12 +23,18 @@ export interface AuthActionResult {
   error: string | null;
 }
 
+export interface SignUpActionResult extends AuthActionResult {
+  needsEmailVerification?: boolean;
+  email?: string;
+}
+
 export interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isConfigured: boolean;
   isGuest: boolean;
+  isPasswordRecovery: boolean;
   oauthError: string | null;
   rememberMe: boolean;
   savedAccounts: SavedAccount[];
@@ -42,7 +48,11 @@ export interface AuthContextValue {
   switchAccount: (accountId: string) => Promise<AuthActionResult>;
   removeSavedAccount: (accountId: string) => Promise<AuthActionResult>;
   signInWithPassword: (email: string, password: string, remember?: boolean) => Promise<AuthActionResult>;
-  signUpWithEmail: (email: string, password: string) => Promise<AuthActionResult>;
+  signUpWithEmail: (email: string, password: string) => Promise<SignUpActionResult>;
+  resendVerificationEmail: (email: string) => Promise<AuthActionResult>;
+  sendPasswordResetEmail: (email: string) => Promise<AuthActionResult>;
+  updatePassword: (newPassword: string) => Promise<AuthActionResult>;
+  completePasswordRecovery: () => void;
   signInWithGoogle: () => Promise<AuthActionResult>;
   signOut: () => Promise<AuthActionResult>;
   displayName: string;
@@ -132,16 +142,25 @@ export function mapAuthError(rawMessage: string | undefined | null): string {
     return 'Incorrect email or password. Please verify your credentials and try again.';
   }
   if (lower.includes('email not confirmed')) {
-    return 'Email verification is pending on this account. Please contact support or try signing in again.';
+    return 'Please verify your email address first. Check your inbox and click the verification link before signing in.';
   }
-  if (lower.includes('token has expired') || lower.includes('otp_expired') || lower.includes('invalid otp') || lower.includes('token is invalid')) {
-    return 'Your session or verification token has expired. Please sign in again.';
+  if (
+    lower.includes('email link is invalid or has expired') ||
+    lower.includes('token has expired') ||
+    lower.includes('otp_expired') ||
+    lower.includes('invalid otp') ||
+    lower.includes('token is invalid')
+  ) {
+    return 'Your verification link or session has expired. Please register or sign in again.';
   }
   if (lower.includes('user already registered') || lower.includes('already been registered')) {
     return 'An account with this email address already exists. Try signing in instead.';
   }
   if (lower.includes('password should be at least') || lower.includes('weak password')) {
     return 'Password is too weak. Please use at least 8 characters with a mix of letters and numbers.';
+  }
+  if (lower.includes('new password should be different') || lower.includes('same_password')) {
+    return 'Your new password must be different from your current password.';
   }
   if (lower.includes('email rate limit') || lower.includes('over_email_send_rate_limit')) {
     return 'Authentication email rate limit reached. Please wait a moment before trying again.';
@@ -157,6 +176,26 @@ export function mapAuthError(rawMessage: string | undefined | null): string {
   }
 
   return rawMessage;
+}
+
+function hasRecoveryUrlIndicator(): boolean {
+  if (typeof window === 'undefined') return false;
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashString = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(hashString);
+  if (
+    searchParams.get('error') ||
+    searchParams.get('error_description') ||
+    hashParams.get('error') ||
+    hashParams.get('error_description')
+  ) {
+    return false;
+  }
+  if (hashParams.get('type') === 'recovery') return true;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  return path === '/reset-password' && Boolean(searchParams.get('code') || hashParams.get('access_token'));
 }
 
 function extractUrlAuthError(): string | null {
@@ -198,10 +237,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(isSupabaseConfigured);
   const [isGuest, setIsGuest] = useState<boolean>(() => readGuestMode());
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(() =>
+    hasRecoveryUrlIndicator()
+  );
   const [oauthError, setOAuthError] = useState<string | null>(() => extractUrlAuthError());
   const [rememberMe, setRememberMeState] = useState<boolean>(() => getRememberMePreference());
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>(() => readSavedAccounts());
   const [isAddingAccount, setIsAddingAccount] = useState(false);
+
+  const completePasswordRecovery = useCallback(() => {
+    setIsPasswordRecovery(false);
+  }, []);
 
   const syncSavedAccounts = useCallback((nextSession: Session | null) => {
     if (!nextSession) return;
@@ -264,14 +310,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
       setSession(nextSession ?? null);
       setUser(nextSession?.user ?? null);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setIsAddingAccount(false);
+      } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+      }
       if (nextSession) {
         setIsGuest(false);
         writeGuestMode(false);
         syncSavedAccounts(nextSession);
+        if (event === 'SIGNED_IN') {
+          setIsAddingAccount(false);
+        }
       }
       setLoading(false);
     });
@@ -317,7 +372,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string): Promise<AuthActionResult> => {
+    async (email: string, password: string): Promise<SignUpActionResult> => {
       if (!isSupabaseConfigured) {
         return { error: 'Supabase environment variables are missing.' };
       }
@@ -325,46 +380,123 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const trimmedEmail = email.trim().toLowerCase();
 
       try {
-        // Create pre-confirmed account via Edge Function so Supabase sends no confirmation/OTP emails
-        const { error: regError } = await supabase.functions.invoke<{ user?: unknown; error?: string }>(
-          'register-user',
-          {
-            body: { email: trimmedEmail, password },
-          }
-        );
-
-        if (regError) {
-          if (typeof regError === 'object') {
-            const ctx = (regError as { context?: unknown }).context;
-            if (ctx && typeof (ctx as Response).json === 'function') {
-              try {
-                const parsed = (await (ctx as Response).clone().json()) as { error?: unknown };
-                if (typeof parsed?.error === 'string' && parsed.error.trim()) {
-                  return { error: parsed.error };
-                }
-              } catch {
-                // Fall through
-              }
-            }
-          }
-          return { error: mapAuthError((regError as { message?: string }).message) };
-        }
-
-        const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signUp({
           email: trimmedEmail,
           password,
+          options: {
+            emailRedirectTo: getAuthRedirectUrl('/'),
+          },
         });
 
-        if (loginError) {
-          return { error: mapAuthError(loginError.message) };
+        if (error) {
+          return { error: mapAuthError(error.message) };
         }
 
-        setSession(data.session ?? null);
-        setUser(data.user ?? data.session?.user ?? null);
-        setIsGuest(false);
-        writeGuestMode(false);
-        syncSavedAccounts(data.session ?? null);
-        setIsAddingAccount(false);
+        // Supabase returns empty identities when a confirmed user with this email already exists
+        if (
+          data.user &&
+          Array.isArray(data.user.identities) &&
+          data.user.identities.length === 0
+        ) {
+          return {
+            error: 'An account with this email address already exists. Please sign in instead.',
+          };
+        }
+
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.user ?? data.session.user);
+          setIsGuest(false);
+          writeGuestMode(false);
+          syncSavedAccounts(data.session);
+          setIsAddingAccount(false);
+          return { error: null, needsEmailVerification: false, email: trimmedEmail };
+        }
+
+        return { error: null, needsEmailVerification: true, email: trimmedEmail };
+      } catch (err) {
+        return { error: mapAuthError(err instanceof Error ? err.message : undefined) };
+      }
+    },
+    [syncSavedAccounts]
+  );
+
+  const resendVerificationEmail = useCallback(
+    async (email: string): Promise<AuthActionResult> => {
+      if (!isSupabaseConfigured) {
+        return { error: 'Supabase environment variables are missing.' };
+      }
+
+      const trimmedEmail = email.trim().toLowerCase();
+
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: trimmedEmail,
+          options: {
+            emailRedirectTo: getAuthRedirectUrl('/'),
+          },
+        });
+
+        if (error) {
+          return { error: mapAuthError(error.message) };
+        }
+
+        return { error: null };
+      } catch (err) {
+        return { error: mapAuthError(err instanceof Error ? err.message : undefined) };
+      }
+    },
+    []
+  );
+
+  const sendPasswordResetEmail = useCallback(async (email: string): Promise<AuthActionResult> => {
+    if (!isSupabaseConfigured) {
+      return { error: 'Supabase environment variables are missing.' };
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: getAuthRedirectUrl('/reset-password'),
+      });
+
+      if (error) {
+        return { error: mapAuthError(error.message) };
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: mapAuthError(err instanceof Error ? err.message : undefined) };
+    }
+  }, []);
+
+  const updatePassword = useCallback(
+    async (newPassword: string): Promise<AuthActionResult> => {
+      if (!isSupabaseConfigured) {
+        return { error: 'Supabase environment variables are missing.' };
+      }
+
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (error) {
+          return { error: mapAuthError(error.message) };
+        }
+
+        if (data.user) {
+          setUser(data.user);
+        }
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          setSession(sessionData.session);
+          syncSavedAccounts(sessionData.session);
+        }
+
         return { error: null };
       } catch (err) {
         return { error: mapAuthError(err instanceof Error ? err.message : undefined) };
@@ -447,6 +579,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setIsAddingAccount(false);
+    setIsPasswordRecovery(false);
     setIsGuest(false);
     writeGuestMode(false);
 
@@ -495,6 +628,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isConfigured: isSupabaseConfigured,
       isGuest,
+      isPasswordRecovery,
       oauthError,
       rememberMe,
       savedAccounts,
@@ -509,6 +643,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeSavedAccount,
       signInWithPassword,
       signUpWithEmail,
+      resendVerificationEmail,
+      sendPasswordResetEmail,
+      updatePassword,
+      completePasswordRecovery,
       signInWithGoogle,
       signOut,
       displayName,
@@ -518,6 +656,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       session,
       loading,
       isGuest,
+      isPasswordRecovery,
       oauthError,
       rememberMe,
       savedAccounts,
@@ -532,6 +671,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeSavedAccount,
       signInWithPassword,
       signUpWithEmail,
+      resendVerificationEmail,
+      sendPasswordResetEmail,
+      updatePassword,
+      completePasswordRecovery,
       signInWithGoogle,
       signOut,
       displayName,

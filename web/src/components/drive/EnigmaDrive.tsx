@@ -207,8 +207,15 @@ export const EnigmaDrive: React.FC<EnigmaDriveProps> = ({ userLabel = 'Device' }
 
     void refreshFromServer();
 
+    const syncInterval = window.setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void refreshFromServer();
+      }
+    }, 10_000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(syncInterval);
       channelRef.current = null;
       if (typeof supabase.removeChannel === 'function') {
         void supabase.removeChannel(channel);

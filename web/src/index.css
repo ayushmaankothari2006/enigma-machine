@@ -28,6 +28,34 @@ button, input, textarea, select, option, label, strong, b, a {
 }
 
 /* =========================================================================
+ * APPLE-STYLE LANDING PAGE BRANDING (Single Source of Truth)
+ * ========================================================================= */
+.landing-apple,
+.landing-apple div,
+.landing-apple span,
+.landing-apple p,
+.landing-apple button,
+.landing-apple input,
+.landing-apple a,
+.landing-apple li,
+.landing-apple strong,
+.landing-apple b {
+  font-family: 'SF Pro Text', 'SF Pro Icons', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.landing-apple h1,
+.landing-apple h2,
+.landing-apple h3,
+.landing-apple h4 {
+  font-family: 'SF Pro Display', 'SF Pro Icons', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.landing-apple code,
+.landing-apple .font-mono {
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+/* =========================================================================
  * NEO-GLASSMORPHISM AUTHENTICATION SYSTEM
  * ========================================================================= */
 .auth-ambient-bg {

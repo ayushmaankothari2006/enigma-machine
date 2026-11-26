@@ -9,6 +9,7 @@ import {
   SettingsCard,
 } from './components';
 import type { WorkspaceMode } from './components/Header';
+import type { LandingSection } from './components/LandingPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useEnigma } from './hooks';
 
@@ -18,15 +19,41 @@ const EnigmaDrive = lazy(() =>
 const RegisterPage = lazy(() =>
   import('./components/auth/RegisterPage').then((mod) => ({ default: mod.RegisterPage }))
 );
+const ResetPasswordPage = lazy(() =>
+  import('./components/auth/ResetPasswordPage').then((mod) => ({ default: mod.ResetPasswordPage }))
+);
+const LandingPage = lazy(() =>
+  import('./components/LandingPage').then((mod) => ({ default: mod.LandingPage }))
+);
 
-type AppRoute = '/' | '/login' | '/register' | '/reset-password';
+type AppRoute =
+  | '/'
+  | '/login'
+  | '/register'
+  | '/reset-password'
+  | '/landing'
+  | '/faq'
+  | '/about'
+  | '/privacy';
 
 function normalizeRoute(pathname: string): AppRoute {
   const clean = pathname.replace(/\/+$/, '') || '/';
   if (clean === '/login') return '/login';
   if (clean === '/register') return '/register';
   if (clean === '/reset-password') return '/reset-password';
+  if (clean === '/landing') return '/landing';
+  if (clean === '/faq') return '/faq';
+  if (clean === '/about') return '/about';
+  if (clean === '/privacy') return '/privacy';
   return '/';
+}
+
+function getLandingSectionForRoute(route: AppRoute): LandingSection | null {
+  if (route === '/landing') return 'home';
+  if (route === '/faq') return 'faq';
+  if (route === '/about') return 'about';
+  if (route === '/privacy') return '/privacy'.slice(1) as LandingSection;
+  return null;
 }
 
 const EnigmaWorkspace: React.FC<{
@@ -307,7 +334,14 @@ const EnigmaWorkspace: React.FC<{
 };
 
 const AppRouter: React.FC = () => {
-  const { user, loading, isGuest, isAddingAccount, cancelAddAccount } = useAuth();
+  const {
+    user,
+    loading,
+    isGuest,
+    isPasswordRecovery,
+    isAddingAccount,
+    cancelAddAccount,
+  } = useAuth();
   const [route, setRoute] = useState<AppRoute>(() =>
     typeof window !== 'undefined' ? normalizeRoute(window.location.pathname) : '/'
   );
@@ -328,8 +362,49 @@ const AppRouter: React.FC = () => {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  const landingSection = getLandingSectionForRoute(route);
+
   useEffect(() => {
     if (typeof document === 'undefined') return;
+    const updateMetaDescription = (content: string) => {
+      const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+      if (meta) {
+        meta.content = content;
+      }
+    };
+
+    if (landingSection) {
+      const metaBySection: Record<LandingSection, { title: string; description: string }> = {
+        home: {
+          title: 'ENIGMA96 | 96-Character Involutory Cipher Engine',
+          description:
+            'Classical Enigma mechanics rebuilt for modern text. Encrypt and decrypt 96 characters across Web, Native Android, and Native Windows.',
+        },
+        faq: {
+          title: 'FAQ | Modern Enigma 96',
+          description:
+            'Answers about ENIGMA96 reciprocal decryption, 96-character alphabet, cross-platform parity, cloud sync, and offline privacy.',
+        },
+        about: {
+          title: 'About | Modern Enigma 96',
+          description:
+            'How ENIGMA96 reimagines the 1940s rotor cipher into a deterministic 96-character engine across Web, Android, and Windows.',
+        },
+        privacy: {
+          title: 'Privacy Policy | Modern Enigma 96',
+          description:
+            'ENIGMA96 privacy policy covering Supabase Auth, Row-Level Security on Web, and 100% offline native Android and Windows apps.',
+        },
+      };
+      document.title = metaBySection[landingSection].title;
+      updateMetaDescription(metaBySection[landingSection].description);
+      return;
+    }
+    if (isPasswordRecovery || (route === '/reset-password' && Boolean(user))) {
+      document.title = 'Set New Password | Modern Enigma 96';
+      updateMetaDescription('Set a new password for your ENIGMA96 account.');
+      return;
+    }
     const isAuthGate = (!user && !isGuest) || isAddingAccount;
     if (isAuthGate) {
       document.title =
@@ -338,10 +413,16 @@ const AppRouter: React.FC = () => {
           : route === '/reset-password'
             ? 'Reset Password | Modern Enigma 96'
             : 'Sign In | Modern Enigma 96';
+      updateMetaDescription(
+        'Sign in or create an ENIGMA96 account to sync rotor presets and workspace state.'
+      );
     } else {
       document.title = 'Modern Enigma 96 | 96-Character Involutory Cryptographic Cipher Engine';
+      updateMetaDescription(
+        'Interactive Modern Enigma 96 cipher engine simulator with 96-character support, 3-rotor double-stepping, Enigma Drive, and PDF export.'
+      );
     }
-  }, [user, isGuest, isAddingAccount, route]);
+  }, [user, isGuest, isPasswordRecovery, isAddingAccount, route, landingSection]);
 
   if (loading) {
     return (
@@ -354,6 +435,47 @@ const AppRouter: React.FC = () => {
           <span>Initializing ENIGMA96...</span>
         </div>
       </div>
+    );
+  }
+
+  if (landingSection && !isPasswordRecovery) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen auth-ambient-bg flex items-center justify-center p-6">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+          </div>
+        }
+      >
+        <LandingPage
+          initialSection={landingSection}
+          isAuthenticated={Boolean(user || isGuest)}
+          onSectionChange={(section) =>
+            navigate(section === 'home' ? '/landing' : (`/${section}` as AppRoute))
+          }
+          onNavigateLogin={() => navigate('/login')}
+          onNavigateRegister={() => navigate('/register')}
+          onOpenWorkspace={() => navigate(user || isGuest ? '/' : '/login')}
+        />
+      </Suspense>
+    );
+  }
+
+  if (isPasswordRecovery || (route === '/reset-password' && Boolean(user))) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen auth-ambient-bg flex items-center justify-center p-6">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+          </div>
+        }
+      >
+        <ResetPasswordPage
+          onResetComplete={() => navigate('/')}
+          onBackToLogin={() => navigate('/login')}
+          onVisitLanding={() => navigate('/landing')}
+        />
+      </Suspense>
     );
   }
 
@@ -371,6 +493,7 @@ const AppRouter: React.FC = () => {
           <RegisterPage
             onNavigateLogin={() => navigate('/login')}
             onAuthSuccess={() => navigate('/')}
+            onVisitLanding={() => navigate('/landing')}
           />
         </Suspense>
       );
@@ -381,6 +504,7 @@ const AppRouter: React.FC = () => {
         initialMode={route === '/reset-password' ? 'forgot' : 'login'}
         onNavigateRegister={() => navigate('/register')}
         onAuthSuccess={() => navigate('/')}
+        onVisitLanding={() => navigate('/landing')}
         onCancelAddAccount={
           (user || isGuest) && isAddingAccount
             ? () => {

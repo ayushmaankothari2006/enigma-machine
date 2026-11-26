@@ -13,6 +13,8 @@ const {
   mockSignUp,
   mockVerifyOtp,
   mockResend,
+  mockResetPasswordForEmail,
+  mockUpdateUser,
   mockSignInWithOAuth,
   mockSetSession,
   mockSignOut,
@@ -26,6 +28,8 @@ const {
   mockSignUp: vi.fn(),
   mockVerifyOtp: vi.fn(),
   mockResend: vi.fn(),
+  mockResetPasswordForEmail: vi.fn(),
+  mockUpdateUser: vi.fn(),
   mockSignInWithOAuth: vi.fn(),
   mockSetSession: vi.fn(),
   mockSignOut: vi.fn(),
@@ -47,6 +51,8 @@ vi.mock('../lib/supabase', async () => {
         signUp: mockSignUp,
         verifyOtp: mockVerifyOtp,
         resend: mockResend,
+        resetPasswordForEmail: mockResetPasswordForEmail,
+        updateUser: mockUpdateUser,
         signInWithOAuth: mockSignInWithOAuth,
         setSession: mockSetSession,
         signOut: mockSignOut,
@@ -126,7 +132,7 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     cleanup();
   });
 
-  it('blocks direct access when signed out, supports Visit Cover Page & Support Enigma modals, and allows Continue as Guest', async () => {
+  it('blocks direct access when signed out, supports Visit Landing Page & Support Enigma modals, and allows Continue as Guest', async () => {
     window.history.replaceState({}, '', '/machine');
     render(<App />);
 
@@ -135,12 +141,26 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     expect(screen.queryByText(/Bot Protection/i)).toBeNull();
     expect(screen.queryByText(/Machine Settings Dashboard/i)).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /^Visit Cover Page$/i }));
-    expect(await screen.findByText(/Currently under development/i)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /^Close$/i }));
-    await waitFor(() => {
-      expect(screen.queryByText(/Currently under development/i)).toBeNull();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /^Visit Landing Page$/i }));
+    expect(
+      await screen.findByRole('heading', {
+        name: /Classical Enigma Mechanics\. Rebuilt for Modern Text/i,
+      })
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /^FAQ$/i }));
+    expect(await screen.findByRole('heading', { name: /Everything You Need to Know/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /^About$/i }));
+    expect(
+      await screen.findByRole('heading', { name: /Reimagining a Legend for the Modern Era/i })
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /^Privacy$/i }));
+    expect(await screen.findByRole('heading', { name: /Private by Design/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Sign In$/i }));
+    await screen.findByRole('heading', { name: /Welcome Back/i });
 
     fireEvent.click(screen.getByRole('button', { name: /Support Enigma\?/i }));
     expect(await screen.findByText(/Currently under development/i)).toBeTruthy();
@@ -296,7 +316,7 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     });
   });
 
-  it('creates pre-confirmed account on register with Cloudflare Turnstile and signs in directly without OTP', async () => {
+  it('sends verification email on register with Cloudflare Turnstile and requires verification before signing in', async () => {
     render(<App />);
     await screen.findByRole('heading', { name: /Welcome Back/i });
 
@@ -325,15 +345,15 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     });
     expect(await screen.findByText(/^Passwords match$/i)).toBeTruthy();
 
-    const user = makeMockUser();
-    const session = makeMockSession(user);
+    const user = makeMockUser({
+      identities: [{ id: 'id-1' } as unknown as NonNullable<User['identities']>[number]],
+    });
     mockFunctionsInvoke.mockImplementation(async (fnName: string) => {
       if (fnName === 'verify-turnstile') return { data: { verified: true }, error: null };
-      if (fnName === 'register-user') return { data: { user: { id: user.id, email: user.email } }, error: null };
       return { data: null, error: null };
     });
-    mockSignInWithPassword.mockResolvedValueOnce({
-      data: { user, session },
+    mockSignUp.mockResolvedValueOnce({
+      data: { user, session: null },
       error: null,
     });
 
@@ -347,17 +367,112 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     });
 
     await waitFor(() => {
-      expect(mockFunctionsInvoke).toHaveBeenCalledWith('register-user', {
-        body: { email: 'ada@example.com', password: 'EnigmaPass123' },
+      expect(mockSignUp).toHaveBeenCalledWith({
+        email: 'ada@example.com',
+        password: 'EnigmaPass123',
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
       });
     });
 
-    expect(await screen.findByText(/Machine Settings Dashboard/i)).toBeTruthy();
-    expect(mockSignUp).not.toHaveBeenCalled();
+    expect(mockFunctionsInvoke).not.toHaveBeenCalledWith('register-user', expect.anything());
+    expect(mockSignInWithPassword).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: /Verify Your Email/i })).toBeTruthy();
+    expect(screen.getByText('ada@example.com')).toBeTruthy();
+    expect(screen.queryByText(/Machine Settings Dashboard/i)).toBeNull();
+
+    // Can return to enter a different email if needed
+    fireEvent.click(screen.getByRole('button', { name: /Use a different email/i }));
+    expect(await screen.findByRole('heading', { name: /^Register$/i })).toBeTruthy();
   });
 
-  it('shows currently under development inside Forgot Password and triggers Google OAuth', async () => {
+  it('rejects already-registered confirmed email on signup and supports resending verification email', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      render(<App />);
+      await screen.findByRole('heading', { name: /Welcome Back/i });
+
+      fireEvent.click(screen.getByRole('button', { name: /Create an account/i }));
+      await screen.findByRole('heading', { name: /^Register$/i });
+
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'existing@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password$/i), {
+        target: { value: 'EnigmaPass123' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), {
+        target: { value: 'EnigmaPass123' },
+      });
+      fireEvent.click(screen.getByRole('checkbox'));
+
+      mockSignUp.mockResolvedValueOnce({
+        data: { user: makeMockUser({ email: 'existing@example.com', identities: [] }), session: null },
+        error: null,
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
+      expect(
+        await screen.findByText(/An account with this email address already exists\. Please sign in instead\./i)
+      ).toBeTruthy();
+      expect(screen.queryByRole('heading', { name: /Verify Your Email/i })).toBeNull();
+
+      // Now register a fresh email and resend after cooldown
+      const newUser = makeMockUser({
+        email: 'fresh@example.com',
+        identities: [{ id: 'id-2' } as unknown as NonNullable<User['identities']>[number]],
+      });
+      mockSignUp.mockResolvedValueOnce({
+        data: { user: newUser, session: null },
+        error: null,
+      });
+      mockResend.mockResolvedValueOnce({ data: {}, error: null });
+
+      fireEvent.change(screen.getByLabelText(/Email Address/i), {
+        target: { value: 'fresh@example.com' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
+      expect(await screen.findByRole('heading', { name: /Verify Your Email/i })).toBeTruthy();
+
+      for (let i = 0; i < 60; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(1000);
+        });
+      }
+
+      const resendBtn = screen.getByRole('button', { name: /Resend Verification Email/i });
+      fireEvent.click(resendBtn);
+      await waitFor(() => {
+        expect(mockResend).toHaveBeenCalledWith({
+          type: 'signup',
+          email: 'fresh@example.com',
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
+      });
+      expect(await screen.findByText(/Verification email sent again/i)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends password reset email via Forgot Password, handles recovery link, and updates password', async () => {
     mockSignInWithOAuth.mockResolvedValue({ data: { provider: 'google', url: '' }, error: null });
+    mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+
+    let authChangeCb: ((event: string, session: Session | null) => void) | undefined;
+    mockOnAuthStateChange.mockImplementation((cb) => {
+      authChangeCb = cb;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
+        },
+      };
+    });
 
     render(<App />);
     await screen.findByRole('heading', { name: /Welcome Back/i });
@@ -374,10 +489,59 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Forgot password\?/i }));
     expect(await screen.findByRole('heading', { name: /Forgot Password/i })).toBeTruthy();
-    expect(screen.getByText(/Currently under development/i)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /Back to Sign In/i }));
-    expect(await screen.findByRole('heading', { name: /Welcome Back/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Send Reset Link/i }));
+    expect(await screen.findByText(/Email address is required\./i)).toBeTruthy();
+    expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+      target: { value: 'ada@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Send Reset Link/i }));
+
+    await waitFor(() => {
+      expect(mockResetPasswordForEmail).toHaveBeenCalledWith('ada@example.com', {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+    });
+    expect(await screen.findByRole('heading', { name: /Check Your Email/i })).toBeTruthy();
+    expect(screen.getByText('ada@example.com')).toBeTruthy();
+
+    // Simulate clicking the recovery link in email -> Supabase fires PASSWORD_RECOVERY
+    const recoveryUser = makeMockUser({ email: 'ada@example.com' });
+    const recoverySession = makeMockSession(recoveryUser);
+    mockUpdateUser.mockResolvedValueOnce({ data: { user: recoveryUser }, error: null });
+    mockGetSession.mockResolvedValueOnce({ data: { session: recoverySession }, error: null });
+
+    act(() => {
+      window.history.pushState({}, '', '/reset-password');
+      authChangeCb?.('PASSWORD_RECOVERY', recoverySession);
+    });
+
+    expect(await screen.findByRole('heading', { name: /Set New Password/i })).toBeTruthy();
+    expect(screen.queryByText(/Machine Settings Dashboard/i)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/^New Password$/i), {
+      target: { value: 'NewEnigmaPass123' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm New Password$/i), {
+      target: { value: 'Mismatch123' },
+    });
+    expect(await screen.findByText(/^Passwords do not match$/i)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(/^Confirm New Password$/i), {
+      target: { value: 'NewEnigmaPass123' },
+    });
+    expect(await screen.findByText(/^Passwords match$/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Update Password/i }));
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewEnigmaPass123' });
+    });
+
+    expect(await screen.findByRole('heading', { name: /Password Updated/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Continue to ENIGMA96/i }));
+    expect(await screen.findByText(/Machine Settings Dashboard/i)).toBeTruthy();
   });
 
   it('omits Turnstile on login, supports Feedback footer modal and guest entry, and gates registration on Turnstile', async () => {
@@ -425,18 +589,16 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
     ).toBeTruthy();
     expect(screen.queryByText(/Machine Settings Dashboard/i)).toBeNull();
 
-    // Completing Turnstile verifies via Edge Function and finishes signup
-    const user = makeMockUser();
-    const session = makeMockSession(user);
+    // Completing Turnstile verifies via Edge Function and sends verification email
+    const user = makeMockUser({
+      identities: [{ id: 'id-3' } as unknown as NonNullable<User['identities']>[number]],
+    });
     mockFunctionsInvoke.mockImplementation(async (fnName: string) => {
       if (fnName === 'verify-turnstile') return { data: { verified: true }, error: null };
-      if (fnName === 'register-user') {
-        return { data: { user: { id: user.id, email: user.email } }, error: null };
-      }
       return { data: null, error: null };
     });
-    mockSignInWithPassword.mockResolvedValueOnce({
-      data: { user, session },
+    mockSignUp.mockResolvedValueOnce({
+      data: { user, session: null },
       error: null,
     });
 
@@ -449,6 +611,9 @@ describe('ENIGMA96 Authentication Pages & Auth Flows', () => {
         body: { token: 'valid-turnstile-token', action: 'register' },
       });
     });
-    expect(await screen.findByText(/Machine Settings Dashboard/i)).toBeTruthy();
+    await waitFor(() => {
+      expect(mockSignUp).toHaveBeenCalled();
+    });
+    expect(await screen.findByRole('heading', { name: /Verify Your Email/i })).toBeTruthy();
   });
 });

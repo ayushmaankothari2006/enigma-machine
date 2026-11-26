@@ -5,11 +5,13 @@ import { Construction, Cpu, HeartHandshake, MessageSquare, X } from 'lucide-reac
 interface AuthLayoutProps {
   leftColumn: React.ReactNode;
   rightColumn: React.ReactNode;
+  onVisitLanding?: () => void;
 }
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
   leftColumn,
   rightColumn,
+  onVisitLanding,
 }) => {
   const [activeModal, setActiveModal] = useState<'cover' | 'feedback' | 'support' | null>(null);
 
@@ -110,10 +112,10 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveModal('cover')}
+            onClick={() => (onVisitLanding ? onVisitLanding() : setActiveModal('cover'))}
             className="rounded-xl px-3.5 py-1.5 bg-blue-50/85 hover:bg-blue-100/80 border border-blue-200/80 text-xs sm:text-sm font-semibold text-[#111c4e] hover:text-blue-700 shrink-0 transition-colors cursor-pointer"
           >
-            Visit Cover Page
+            Visit Landing Page
           </button>
         </div>
       </header>

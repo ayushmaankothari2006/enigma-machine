@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   BarChart2,
   CheckCircle2,
@@ -10,6 +11,8 @@ import {
   Loader2,
   Lock,
   Mail,
+  MailCheck,
+  RefreshCw,
   User,
   X,
   Zap,
@@ -32,6 +35,7 @@ import {
 interface RegisterPageProps {
   onNavigateLogin: () => void;
   onAuthSuccess: () => void;
+  onVisitLanding?: () => void;
 }
 
 type RegisterFieldErrors = {
@@ -62,8 +66,9 @@ const FEATURE_BADGES = [
 export const RegisterPage: React.FC<RegisterPageProps> = ({
   onNavigateLogin,
   onAuthSuccess,
+  onVisitLanding,
 }) => {
-  const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signUpWithEmail, resendVerificationEmail, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,6 +88,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [legalModal, setLegalModal] = useState<'terms' | 'privacy' | null>(null);
+
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (!legalModal) return;
@@ -156,10 +174,46 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         return;
       }
 
+      if (outcome.needsEmailVerification) {
+        setPendingVerificationEmail(outcome.email ?? email.trim().toLowerCase());
+        setResendCooldown(60);
+        setResendNotice(null);
+        setPassword('');
+        setConfirmPassword('');
+        return;
+      }
+
       onAuthSuccess();
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleResendVerification = async () => {
+    if (!pendingVerificationEmail || resending || resendCooldown > 0) return;
+    setServerError(null);
+    setResendNotice(null);
+    setResending(true);
+    try {
+      const result = await resendVerificationEmail(pendingVerificationEmail);
+      if (result.error) {
+        setServerError(result.error);
+        return;
+      }
+      setResendCooldown(60);
+      setResendNotice('Verification email sent again. Please check your inbox and spam folder.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleUseDifferentEmail = () => {
+    setPendingVerificationEmail(null);
+    setServerError(null);
+    setResendNotice(null);
+    setResendCooldown(0);
+    setTurnstileResetKey((prev) => prev + 1);
+    setTurnstileToken('');
   };
 
   const handleGoogleSignUp = async () => {
@@ -216,7 +270,98 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
     </div>
   );
 
-  const rightCard = (
+  const rightCard = pendingVerificationEmail ? (
+    <div className="glass-auth-card rounded-[2rem] p-5 sm:p-6 w-full max-w-[440px] space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="glass-icon-tile w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+          <MailCheck className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-[#111c4e] tracking-tight leading-tight">
+            Verify Your Email
+          </h2>
+          <p className="text-[11px] sm:text-xs font-normal text-[#3b476e]">
+            Confirm your inbox to activate your account
+          </p>
+        </div>
+      </div>
+
+      {serverError && (
+        <div
+          role="alert"
+          className="rounded-xl bg-red-50/90 border border-red-200 px-3 py-2 flex items-start gap-2 text-xs font-medium text-red-700"
+        >
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <span>{serverError}</span>
+        </div>
+      )}
+
+      {resendNotice && (
+        <div
+          role="status"
+          className="rounded-xl bg-emerald-50/90 border border-emerald-200 px-3 py-2 flex items-start gap-2 text-xs font-medium text-emerald-700"
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <span>{resendNotice}</span>
+        </div>
+      )}
+
+      <div className="rounded-2xl bg-blue-50/85 border border-blue-200/80 px-4 py-4 space-y-2 text-xs text-[#111c4e]">
+        <p className="font-medium leading-relaxed">
+          We sent a verification link to{' '}
+          <span className="font-bold text-blue-700 break-all">{pendingVerificationEmail}</span>.
+        </p>
+        <p className="text-[#3b476e] leading-relaxed">
+          Open the email and click the <strong>Verify</strong> button to activate your account and
+          sign in. Unverified accounts cannot log in and expired unverified registrations are
+          automatically purged.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleResendVerification}
+        disabled={resending || resendCooldown > 0}
+        className="w-full rounded-full py-2.5 px-5 bg-white/95 hover:bg-blue-50/40 border border-blue-400/75 text-xs sm:text-sm font-semibold text-[#111c4e] flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {resending ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+            <span>Sending Verification Email...</span>
+          </>
+        ) : resendCooldown > 0 ? (
+          <>
+            <RefreshCw className="w-4 h-4 text-slate-400" />
+            <span>Resend email in {resendCooldown}s</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="w-4 h-4 text-blue-600" />
+            <span>Resend Verification Email</span>
+          </>
+        )}
+      </button>
+
+      <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+        <button
+          type="button"
+          onClick={handleUseDifferentEmail}
+          className="font-semibold text-[#3b476e] hover:text-[#111c4e] hover:underline inline-flex items-center gap-1 cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Use a different email</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onNavigateLogin}
+          className="font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+        >
+          Back to Sign In
+        </button>
+      </div>
+    </div>
+  ) : (
     <div className="glass-auth-card rounded-[2rem] p-4 sm:p-5 w-full max-w-[440px]">
       {/* Card Header */}
       <div className="flex items-center gap-3 mb-2.5">
@@ -596,6 +741,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
       <AuthLayout
         leftColumn={leftHero}
         rightColumn={rightCard}
+        onVisitLanding={onVisitLanding}
       />
       {legalDialog}
     </>

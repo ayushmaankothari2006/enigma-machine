@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
-  Construction,
+  ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
   KeyRound,
   Loader2,
   Lock,
   Mail,
+  MailCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRememberedEmail } from '../../lib/supabase';
@@ -21,6 +24,7 @@ interface LoginPageProps {
   onNavigateRegister: () => void;
   onAuthSuccess: () => void;
   onCancelAddAccount?: () => void;
+  onVisitLanding?: () => void;
   initialMode?: 'login' | 'forgot';
 }
 
@@ -33,6 +37,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onNavigateRegister,
   onAuthSuccess,
   onCancelAddAccount,
+  onVisitLanding,
   initialMode = 'login',
 }) => {
   const {
@@ -42,6 +47,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     clearOAuthError,
     continueAsGuest,
     signInWithPassword,
+    sendPasswordResetEmail,
     signInWithGoogle,
   } = useAuth();
 
@@ -56,6 +62,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const [resetEmailSentTo, setResetEmailSentTo] = useState<string | null>(null);
+  const [resetCooldown, setResetCooldown] = useState(0);
+  const [resetSuccessNotice, setResetSuccessNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setResetCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [resetCooldown]);
+
   const displayError = serverError ?? oauthError;
 
   const switchMode = (nextMode: 'login' | 'forgot') => {
@@ -63,6 +81,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setFieldErrors({});
     setServerError(null);
     setPasteNotice(false);
+    setResetEmailSentTo(null);
+    setResetCooldown(0);
+    setResetSuccessNotice(null);
     clearOAuthError();
   };
 
@@ -96,6 +117,56 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }
 
       onAuthSuccess();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearOAuthError();
+    setServerError(null);
+    setResetSuccessNotice(null);
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setFieldErrors({ email: emailErr });
+      return;
+    }
+
+    setFieldErrors({});
+    setSubmitting(true);
+    try {
+      const result = await sendPasswordResetEmail(email);
+      if (result.error) {
+        setServerError(result.error);
+        return;
+      }
+
+      setResetEmailSentTo(email.trim().toLowerCase());
+      setResetCooldown(60);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendResetEmail = async () => {
+    if (!resetEmailSentTo || submitting || resetCooldown > 0) return;
+    clearOAuthError();
+    setServerError(null);
+    setResetSuccessNotice(null);
+    setSubmitting(true);
+    try {
+      const result = await sendPasswordResetEmail(resetEmailSentTo);
+      if (result.error) {
+        setServerError(result.error);
+        return;
+      }
+
+      setResetCooldown(60);
+      setResetSuccessNotice(
+        'Password reset link sent again. Please check your inbox and spam folder.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -360,35 +431,174 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       )}
 
       {mode === 'forgot' && (
-        <div className="py-4 text-center space-y-5">
-          <div className="flex items-center justify-center gap-4 text-left">
-            <div className="glass-icon-tile w-14 h-14 rounded-2xl flex items-center justify-center shrink-0">
-              <KeyRound className="w-6 h-6 text-white" />
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="glass-icon-tile w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+              {resetEmailSentTo ? (
+                <MailCheck className="w-5 h-5 text-white" />
+              ) : (
+                <KeyRound className="w-5 h-5 text-white" />
+              )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#111c4e] tracking-tight">Forgot Password</h2>
-              <p className="text-xs sm:text-sm font-normal text-[#3b476e] mt-0.5">
-                Account password recovery
+              <h2 className="text-xl sm:text-2xl font-bold text-[#111c4e] tracking-tight">
+                {resetEmailSentTo ? 'Check Your Email' : 'Forgot Password'}
+              </h2>
+              <p className="text-xs font-normal text-[#3b476e] mt-0.5">
+                {resetEmailSentTo
+                  ? 'Follow the link in your inbox to reset your password'
+                  : 'Enter your account email to receive a reset link'}
               </p>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-amber-50/90 border border-amber-200/90 px-4 py-5 space-y-2">
-            <Construction className="w-7 h-7 text-amber-600 mx-auto" />
-            <p className="text-sm font-bold text-[#111c4e]">Currently under development</p>
-            <p className="text-xs font-normal text-[#3b476e] leading-relaxed">
-              Password recovery service is not yet connected.
-            </p>
-          </div>
+          {displayError && (
+            <div
+              role="alert"
+              className="rounded-xl bg-red-50/90 border border-red-200 px-3 py-2 flex items-start gap-2 text-xs font-medium text-red-700"
+            >
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{displayError}</span>
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() => switchMode('login')}
-            className="glass-primary-cta w-full rounded-full py-3 px-5 text-xs sm:text-sm font-semibold text-white inline-flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Sign In</span>
-          </button>
+          {resetSuccessNotice && (
+            <div
+              role="status"
+              className="rounded-xl bg-emerald-50/90 border border-emerald-200 px-3 py-2 flex items-start gap-2 text-xs font-medium text-emerald-700"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{resetSuccessNotice}</span>
+            </div>
+          )}
+
+          {resetEmailSentTo ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-blue-50/85 border border-blue-200/80 px-4 py-4 space-y-2 text-xs text-[#111c4e]">
+                <p className="font-medium leading-relaxed">
+                  We sent a password reset link to{' '}
+                  <span className="font-bold text-blue-700 break-all">{resetEmailSentTo}</span>.
+                </p>
+                <p className="text-[#3b476e] leading-relaxed">
+                  Open the email and click the reset link to open the password reset page and choose
+                  a new password.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResendResetEmail}
+                disabled={submitting || resetCooldown > 0}
+                className="w-full rounded-full py-2.5 px-5 bg-white/95 hover:bg-blue-50/40 border border-blue-400/75 text-xs sm:text-sm font-semibold text-[#111c4e] flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Sending Reset Link...</span>
+                  </>
+                ) : resetCooldown > 0 ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 text-slate-400" />
+                    <span>Resend email in {resetCooldown}s</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 text-blue-600" />
+                    <span>Resend Reset Link</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetEmailSentTo(null);
+                    setResetCooldown(0);
+                    setResetSuccessNotice(null);
+                    setServerError(null);
+                  }}
+                  className="font-semibold text-[#3b476e] hover:text-[#111c4e] hover:underline cursor-pointer"
+                >
+                  Use a different email
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => switchMode('login')}
+                  className="font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotSubmit} noValidate className="space-y-3">
+              <div className="space-y-1">
+                <label htmlFor="forgot-email" className="block text-xs font-semibold text-[#111c4e]">
+                  Email Address
+                </label>
+                <div
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2 bg-[#f4f7fc]/90 border transition-all ${
+                    fieldErrors.email
+                      ? 'border-red-400 focus-within:ring-4 focus-within:ring-red-500/10'
+                      : 'border-slate-200/90 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10'
+                  }`}
+                >
+                  <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: validateEmail(e.target.value) }));
+                      }
+                    }}
+                    placeholder="you@example.com"
+                    aria-invalid={Boolean(fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? 'forgot-email-error' : undefined}
+                    className="w-full bg-transparent text-xs sm:text-sm font-normal text-[#111c4e] placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+                {fieldErrors.email && (
+                  <p id="forgot-email-error" className="text-[11px] font-medium text-red-600">
+                    {fieldErrors.email}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="glass-primary-cta w-full rounded-full py-2.5 px-5 text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sending Reset Link...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Reset Link</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className="w-full pt-1 text-xs font-semibold text-[#3b476e] hover:text-[#111c4e] hover:underline inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Sign In</span>
+              </button>
+            </form>
+          )}
         </div>
       )}
     </div>
@@ -398,6 +608,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     <AuthLayout
       leftColumn={leftHero}
       rightColumn={rightCard}
+      onVisitLanding={onVisitLanding}
     />
   );
 };

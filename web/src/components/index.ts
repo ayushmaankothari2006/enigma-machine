@@ -7,4 +7,5 @@ export { HoldButton } from './HoldButton';
 export { NotchDropdown } from './NotchDropdown';
 export { ErrorBoundary } from './ErrorBoundary';
 export { EnigmaDrive } from './drive';
-export { LoginPage, RegisterPage, AuthLayout } from './auth';
+export { LoginPage, RegisterPage, ResetPasswordPage, AuthLayout } from './auth';
+export { LandingPage, type LandingSection } from './LandingPage';

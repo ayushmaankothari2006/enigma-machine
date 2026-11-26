@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div
               role="tablist"
               aria-label="Workspace mode"
-              className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold mt-0.5 min-w-0 py-0.5 whitespace-nowrap"
+              className="inline-flex items-center gap-1 p-0.5 rounded-xl bg-slate-100/90 border border-slate-200/80 shadow-inner text-[10px] sm:text-xs font-bold mt-0.5 whitespace-nowrap"
               style={{ fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, monospace", fontWeight: 700 }}
             >
               <button
@@ -94,26 +94,23 @@ export const Header: React.FC<HeaderProps> = ({
                 role="tab"
                 aria-selected={activeMode === 'cipher'}
                 onClick={() => onSelectMode?.('cipher')}
-                className={`truncate transition-all cursor-pointer focus:outline-none py-0.5 ${
+                className={`px-2.5 py-0.5 rounded-lg transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   activeMode === 'cipher'
-                    ? 'text-blue-600 drop-shadow-[0_0_8px_rgba(37,99,235,0.55)]'
-                    : 'text-slate-400 hover:text-slate-600'
+                    ? 'bg-blue-600 text-white shadow-[0_2px_8px_rgba(37,99,235,0.3)]'
+                    : 'text-slate-600 hover:text-blue-700 hover:bg-white/75'
                 }`}
               >
                 <span className="sr-only">Workspace: </span>Cipher Engine
               </button>
-              <span aria-hidden="true" className="text-slate-300 select-none shrink-0">
-                |
-              </span>
               <button
                 type="button"
                 role="tab"
                 aria-selected={activeMode === 'drive'}
                 onClick={() => onSelectMode?.('drive')}
-                className={`shrink-0 transition-all cursor-pointer focus:outline-none py-0.5 pr-1 ${
+                className={`px-2.5 py-0.5 rounded-lg transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   activeMode === 'drive'
-                    ? 'text-blue-600 drop-shadow-[0_0_8px_rgba(37,99,235,0.55)]'
-                    : 'text-slate-400 hover:text-slate-600'
+                    ? 'bg-blue-600 text-white shadow-[0_2px_8px_rgba(37,99,235,0.3)]'
+                    : 'text-slate-600 hover:text-blue-700 hover:bg-white/75'
                 }`}
               >
                 Enigma Drive
