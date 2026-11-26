@@ -11,6 +11,7 @@ export const OutputCard: React.FC<OutputCardProps> = ({
   onUseOutputAsInput,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export const OutputCard: React.FC<OutputCardProps> = ({
 
   const handleCopy = async () => {
     if (!value) return;
+    setCopyError(null);
 
     let success = false;
     if (navigator?.clipboard?.writeText) {
@@ -44,8 +46,8 @@ export const OutputCard: React.FC<OutputCardProps> = ({
         textarea.select();
         success = document.execCommand('copy');
         document.body.removeChild(textarea);
-      } catch (err) {
-        console.error('Fallback clipboard copy failed:', err);
+      } catch {
+        success = false;
       }
     }
 
@@ -53,6 +55,10 @@ export const OutputCard: React.FC<OutputCardProps> = ({
       setCopied(true);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } else {
+      setCopyError('Clipboard access was denied. Please select and copy manually.');
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopyError(null), 4000);
     }
   };
 
@@ -119,6 +125,12 @@ export const OutputCard: React.FC<OutputCardProps> = ({
           aria-label="Enciphered Ciphertext Output"
         />
       </div>
+
+      {copyError && (
+        <p role="alert" className="text-[11px] font-medium text-red-600">
+          {copyError}
+        </p>
+      )}
     </div>
   );
 };

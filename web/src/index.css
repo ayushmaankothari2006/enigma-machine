@@ -1,3 +1,6 @@
+@import '@fontsource/cascadia-mono/400.css';
+@import '@fontsource/cascadia-mono/500.css';
+@import '@fontsource/cascadia-mono/600.css';
 @import '@fontsource/cascadia-mono/700.css';
 @tailwind base;
 @tailwind components;
@@ -7,13 +10,92 @@
   color-scheme: light;
 }
 
-/* Force Bold Cascadia Mono everywhere */
 *, *::before, *::after,
 html, body,
 div, span, p, h1, h2, h3, h4, h5, h6,
 button, input, textarea, select, option, label, strong, b, a {
-  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace !important;
-  font-weight: 700 !important;
+  font-family: 'Cascadia Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
+}
+
+.workspace-bold,
+.workspace-bold h1,
+.workspace-bold h2,
+.workspace-bold h3,
+.workspace-bold button,
+.workspace-bold strong,
+.workspace-bold b {
+  font-weight: 700;
+}
+
+/* =========================================================================
+ * NEO-GLASSMORPHISM AUTHENTICATION SYSTEM
+ * ========================================================================= */
+.auth-ambient-bg {
+  background-color: #f4f7fe;
+  background-image:
+    radial-gradient(circle at 18% 25%, rgba(219, 234, 254, 0.85) 0%, transparent 45%),
+    radial-gradient(circle at 82% 22%, rgba(224, 231, 255, 0.7) 0%, transparent 48%),
+    radial-gradient(circle at 50% 88%, rgba(239, 246, 255, 0.9) 0%, transparent 50%),
+    linear-gradient(145deg, #f7f9ff 0%, #eff4fc 52%, #f5f8ff 100%);
+}
+
+.glass-auth-bar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 10px 30px -10px rgba(30, 58, 138, 0.12),
+    0 2px 8px -2px rgba(37, 99, 235, 0.06);
+}
+
+.glass-auth-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1.5px solid rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 28px 65px -16px rgba(37, 99, 235, 0.16),
+    0 10px 28px -8px rgba(15, 23, 42, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
+}
+
+.glass-feature-badge {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 10px 24px -10px rgba(37, 99, 235, 0.1),
+    0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.glass-icon-tile {
+  background: linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow:
+    0 10px 22px -4px rgba(37, 99, 235, 0.45),
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.45),
+    inset -1.5px -1.5px 3px rgba(15, 23, 42, 0.25);
+}
+
+.glass-primary-cta {
+  background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 50%, #2563eb 100%);
+  box-shadow:
+    0 12px 26px -6px rgba(37, 99, 235, 0.55),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.glass-primary-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 16px 32px -6px rgba(37, 99, 235, 0.62),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.glass-primary-cta:active:not(:disabled) {
+  transform: translateY(0.5px);
 }
 
 /* Custom scrollbars */
@@ -232,4 +314,24 @@ button, input, textarea, select, option, label, strong, b, a {
     -2px -2px 6px 0px rgba(255, 255, 255, 0.9),
     inset 1px 1px 2px 0px rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Flowing sine waveform animation (right-to-left) for Enigma Drive duration slider */
+@keyframes drive-wave-flow {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-36px);
+  }
+}
+
+.drive-wave-flow {
+  animation: drive-wave-flow 1.3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drive-wave-flow {
+    animation: none;
+  }
 }

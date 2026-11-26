@@ -1,3 +1,4 @@
+import { normalizeMod96 } from './alphabet';
 import { ReflectorDefinition } from './presets';
 
 export class Reflector {
@@ -8,6 +9,6 @@ export class Reflector {
   }
 
   reflect(x: number): number {
-    return this.definition.wiring[x];
+    return this.definition.wiring[normalizeMod96(x)];
   }
 }

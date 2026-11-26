@@ -30,22 +30,33 @@ export function charToIndex(ch: string): number {
 }
 
 /**
+ * Normalizes any numeric index safely into [0, 95], guarding against NaN/Infinity.
+ */
+export function normalizeMod96(index: number, fallback = 0): number {
+  if (typeof index !== 'number' || !Number.isFinite(index)) {
+    return fallback;
+  }
+  const intVal = Math.trunc(index);
+  return ((intVal % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE;
+}
+
+/**
  * Fast O(1) index-to-character lookup
  */
 export function indexToChar(index: number): string {
-  const norm = ((index % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE;
+  const norm = normalizeMod96(index);
   return ALPHABET_CHARS[norm] ?? '';
 }
 
 export function formatGlyph(index: number): string {
-  const norm = ((index % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE;
+  const norm = normalizeMod96(index);
   if (norm === 0) return '[Space]';
   if (norm === 95) return '[Enter]';
   return ALPHABET_CHARS[norm] ?? '?';
 }
 
 export function sanitizeInput(text: string): string {
-  if (!text) return '';
+  if (typeof text !== 'string' || !text) return '';
   // Normalize CRLF and CR to LF
   const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   let result = '';

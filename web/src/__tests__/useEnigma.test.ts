@@ -97,4 +97,19 @@ describe('useEnigma Hook State & Control Integration', () => {
     expect(result.current.inputText).toBe('');
     expect(result.current.outputText).toBe('');
   });
+
+  it('pre-randomizes initial rotor positions, rings, and notches when randomizeDefaults is enabled', () => {
+    const { result } = renderHook(() => useEnigma(undefined, { randomizeDefaults: true }));
+
+    (['left', 'middle', 'right'] as const).forEach((slot) => {
+      const rotor = result.current.rotors[slot];
+      expect(rotor.position).toBeGreaterThanOrEqual(0);
+      expect(rotor.position).toBeLessThan(ALPHABET_SIZE);
+      expect(rotor.ringSetting).toBeGreaterThanOrEqual(0);
+      expect(rotor.ringSetting).toBeLessThan(ALPHABET_SIZE);
+      expect(rotor.turnoverNotch).toBeGreaterThanOrEqual(0);
+      expect(rotor.turnoverNotch).toBeLessThan(ALPHABET_SIZE);
+    });
+    expect(['A', 'B']).toContain(result.current.reflector);
+  });
 });

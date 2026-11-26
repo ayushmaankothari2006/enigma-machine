@@ -130,6 +130,20 @@ dist-windows/
 *.pdb
 
 # ------------------------------------------------------------------------------
-# 8. User-Generated / Exported Reports
+# 8. Test Coverage, Caches & Tooling
+# ------------------------------------------------------------------------------
+coverage/
+**/coverage/
+playwright-report/
+**/playwright-report/
+blob-report/
+test-results/
+.cache/
+.turbo/
+supabase/.temp/
+supabase/.branches/
+
+# ------------------------------------------------------------------------------
+# 9. User-Generated / Exported Reports
 # ------------------------------------------------------------------------------
 *.pdf

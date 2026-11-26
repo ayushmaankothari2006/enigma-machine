@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { charToIndex, indexToChar, formatGlyph, sanitizeInput, ALPHABET_SIZE } from '../engine/alphabet';
+import {
+  ALPHABET_SIZE,
+  charToIndex,
+  formatGlyph,
+  indexToChar,
+  normalizeMod96,
+  sanitizeInput,
+} from '../engine/alphabet';
+import { Reflector } from '../engine/reflector';
 import { Rotor } from '../engine/rotor';
-import { ROTOR_CATALOG } from '../engine/presets';
+import { REFLECTOR_CATALOG, ROTOR_CATALOG } from '../engine/presets';
 import { EnigmaMachine } from '../engine/enigma';
 
 describe('Error Handling, Edge Cases & Performance Verification', () => {
@@ -26,6 +34,26 @@ describe('Error Handling, Edge Cases & Performance Verification', () => {
       expect(charToIndex('!')).toBe(1);
       expect(charToIndex('~')).toBe(94);
       expect(charToIndex('\n')).toBe(95);
+    });
+
+    it('handles non-finite (NaN / Infinity) and fractional rotor/reflector inputs safely', () => {
+      expect(normalizeMod96(NaN, 5)).toBe(5);
+      expect(normalizeMod96(Infinity)).toBe(0);
+      expect(normalizeMod96(-Infinity, 3)).toBe(3);
+      expect(normalizeMod96(97.9)).toBe(1);
+      expect(indexToChar(NaN)).toBe(' ');
+      expect(formatGlyph(Infinity)).toBe('[Space]');
+
+      const badRotor = new Rotor(ROTOR_CATALOG['I'], NaN, Infinity, NaN);
+      expect(badRotor.position).toBe(0);
+      expect(badRotor.ringSetting).toBe(0);
+      expect(badRotor.turnoverNotch).toBe(ROTOR_CATALOG['I'].notch);
+      expect(badRotor.forward(NaN)).toBe(ROTOR_CATALOG['I'].wiring[0]);
+      expect(badRotor.backward(Infinity)).toBe(ROTOR_CATALOG['I'].inverse[0]);
+
+      const reflector = new Reflector(REFLECTOR_CATALOG['A']);
+      expect(reflector.reflect(NaN)).toBe(REFLECTOR_CATALOG['A'].wiring[0]);
+      expect(reflector.reflect(96)).toBe(REFLECTOR_CATALOG['A'].wiring[0]);
     });
 
     it('sanitizes edge inputs (nullish, only whitespace, mixed CRLF, emojis)', () => {

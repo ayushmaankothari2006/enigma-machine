@@ -6,6 +6,7 @@ interface InputCardProps {
   onChange: (val: string) => void;
   onClear: () => void;
   onLoadSample: () => void;
+  textareaRef?: React.RefObject<HTMLTextAreaElement>;
 }
 
 export const InputCard: React.FC<InputCardProps> = ({
@@ -13,6 +14,7 @@ export const InputCard: React.FC<InputCardProps> = ({
   onChange,
   onClear,
   onLoadSample,
+  textareaRef,
 }) => {
   return (
     <div className="clay-card p-4 sm:p-6 flex flex-col h-full space-y-3.5 sm:space-y-4">
@@ -59,9 +61,11 @@ export const InputCard: React.FC<InputCardProps> = ({
       {/* Clay Inset Textarea Well */}
       <div className="clay-well p-2.5 sm:p-3 flex-1 min-h-[160px] sm:min-h-[200px] lg:min-h-[220px]">
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Type or paste text here to encipher in real-time..."
+          aria-label="Plaintext Input Buffer"
           className="w-full h-full min-h-[150px] sm:min-h-[190px] lg:min-h-[210px] bg-transparent text-slate-800 font-mono text-xs sm:text-sm leading-relaxed resize-none focus:outline-none select-text"
           spellCheck={false}
         />

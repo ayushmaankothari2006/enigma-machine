@@ -76,11 +76,11 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({
               className="clay-bay p-3.5 sm:p-4 lg:p-5 space-y-3 sm:space-y-4 relative"
             >
               {/* Top Slot Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-slate-200/80">
                 <h3 className="text-xs sm:text-sm font-bold text-blue-950 font-mono flex items-center gap-2">
                   {label}
                 </h3>
-                <span className={`text-[10px] font-mono px-2 sm:px-2.5 py-0.5 rounded-full inline-block ${
+                <span className={`text-[10px] font-mono px-2 sm:px-2.5 py-0.5 rounded-full inline-block whitespace-nowrap ${
                   color === 'orange' ? 'clay-pill-orange' : 'clay-pill-blue'
                 }`}>
                   {badge}
@@ -89,7 +89,7 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({
 
               {/* Rotor Position & Editable Notch Control */}
               <div className="space-y-1 sm:space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono text-slate-500">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] sm:text-xs font-mono text-slate-500">
                   <span className="font-semibold text-blue-900">Position (P):</span>
                   
                   {/* Custom Rounded-Rectangle Notch Dropdown showing up to 5 entries */}

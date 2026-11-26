@@ -1,4 +1,4 @@
-import { ALPHABET_SIZE } from './alphabet';
+import { ALPHABET_SIZE, normalizeMod96 } from './alphabet';
 import { RotorDefinition } from './presets';
 
 export class Rotor {
@@ -9,28 +9,30 @@ export class Rotor {
 
   constructor(definition: RotorDefinition, position: number = 0, ringSetting: number = 0, turnoverNotch?: number) {
     this.definition = definition;
-    this.position = ((position % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE;
-    this.ringSetting = ((ringSetting % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE;
+    this.position = normalizeMod96(position);
+    this.ringSetting = normalizeMod96(ringSetting);
     this.turnoverNotch = turnoverNotch !== undefined
-      ? ((turnoverNotch % ALPHABET_SIZE) + ALPHABET_SIZE) % ALPHABET_SIZE
+      ? normalizeMod96(turnoverNotch, definition.notch)
       : definition.notch;
   }
 
   get effectiveShift(): number {
-    return ((this.position - this.ringSetting) % ALPHABET_SIZE + ALPHABET_SIZE) % ALPHABET_SIZE;
+    return normalizeMod96(this.position - this.ringSetting);
   }
 
   forward(x: number): number {
+    const input = normalizeMod96(x);
     const shift = this.effectiveShift;
-    const pinIn = (x + shift) % ALPHABET_SIZE;
+    const pinIn = (input + shift) % ALPHABET_SIZE;
     const pinMid = this.definition.wiring[pinIn];
-    return ((pinMid - shift) % ALPHABET_SIZE + ALPHABET_SIZE) % ALPHABET_SIZE;
+    return normalizeMod96(pinMid - shift);
   }
 
   backward(x: number): number {
+    const input = normalizeMod96(x);
     const shift = this.effectiveShift;
-    const pinIn = (x + shift) % ALPHABET_SIZE;
+    const pinIn = (input + shift) % ALPHABET_SIZE;
     const pinMid = this.definition.inverse[pinIn];
-    return ((pinMid - shift) % ALPHABET_SIZE + ALPHABET_SIZE) % ALPHABET_SIZE;
+    return normalizeMod96(pinMid - shift);
   }
 }
